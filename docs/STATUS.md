@@ -7,6 +7,7 @@ _Last updated: 21 Nov 2026_
 
 - Project: `C:\dev\maist\maist-game` (git repo, branch `main`). Devvit app name: **`maist-game`** (`maist` was taken). Reddit account: u/Dangerous_Lie_7980 (CLI token saved by Devvit in the user profile, not in the repo).
 - Stack: Devvit Web 0.15.4, Phaser 4.2.1, Vite 8, Hono, TypeScript 6. Node v26.13.0 locally.
+- **Playtest:** `npm run dev` → https://www.reddit.com/r/maist_game_dev/?playtest=maist-game (app v0.0.1.1). This auto-created subreddit is **private**; a public test subreddit (< 200 members) is still needed for judging. Installing the app created the first post automatically (onAppInstall trigger); moderators can make more from the subreddit menu ("Maist: create tonight's dream post").
 - The docs site developers.reddit.com is blocked for Claude's fetch tool and browser, so Devvit docs are read from `github.com/reddit/devvit-docs`.
 
 ## Vertical slice: done
