@@ -1,0 +1,22 @@
+/* Expanded (fullscreen) view only: swipes are allowed here, so the canvas owns touch. */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #120d24;
+  color: #f4ecff;
+  overflow: hidden;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+#game-container {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}

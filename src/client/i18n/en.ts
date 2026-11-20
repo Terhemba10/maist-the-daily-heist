@@ -1,0 +1,75 @@
+/** Every player-facing string. Add zh / ja / hi files with the same keys later. */
+export const en = {
+  'app.name': 'Maist',
+  'app.tagline': 'a mind heist, three layers deep',
+  'title.night': 'Night {night} · {dreamer}',
+  'title.dive': 'Dive',
+  'title.season': 'Season 1 · The Moth',
+  'title.quality.high': 'Quality: High',
+  'title.quality.low': 'Quality: Low',
+
+  'pick.heading': 'Choose one ability',
+  'pick.sub': 'One charge on every layer.',
+  'pick.start': 'Fall asleep',
+  'ability.still': 'Still',
+  'ability.still.desc': 'Freeze echoes for 2 s. Walk through them.',
+  'ability.blink': 'Blink',
+  'ability.blink.desc': 'Your next step passes through one wall.',
+  'ability.lantern': 'Lantern',
+  'ability.lantern.desc': 'Reveal hidden doors for 3 s. They stay open.',
+  'ability.used': '{ability}!',
+  'ability.empty': 'No charge left on this layer',
+
+  'layer.name.1': 'Layer 1 · Dusk',
+  'layer.name.2': 'Layer 2 · Deep',
+  'layer.name.3': 'Layer 3 · Ember',
+  'twist.tide-doors': 'Tide doors: they swap with the waves',
+  'twist.mirror': 'Mirror page: left is right here',
+  'twist.echoes': 'Echoes walk your steps. Find the memory key.',
+  'hud.moves': '{moves} moves',
+  'hud.pull': 'Pull',
+  'hud.hint': 'Arrows / WASD to move  ·  Space or 1-3 for your ability  ·  M sound',
+
+  'how.1': 'Swipe or use the arrow keys to walk.',
+  'how.2': 'Find the glowing Drop to fall deeper. Steal the memory from the vault on layer 3.',
+  'how.3': 'The ring is the Pull. When it closes, you wake.',
+  'how.skip': 'Tap to skip',
+
+  'event.blocked.vault': 'The vault is sealed. Find the memory key.',
+  'event.key': 'Memory key',
+  'event.caught': 'An echo caught you: −8 s',
+  'event.falling': 'Falling…',
+
+  'card.memory': 'Memory recovered',
+  'card.clue': 'Clue',
+  'card.wake': 'Wake up',
+
+  'wake.title.cleared': 'You woke in Lowmere',
+  'wake.title.failed': 'The Pull woke you',
+  'wake.near': 'So close: {near}',
+  'near.pull': 'the Pull caught you on layer {layer}',
+  'near.moons.one': '1 move from three moons',
+  'near.moons.many': '{n} moves from three moons',
+  'wake.score': 'Score {score}',
+  'wake.lucid': 'Lucid',
+  'wake.again': 'Dream again (practice)',
+  'wake.share.preview': 'Share line preview',
+
+  'menu.mute': 'Sound off',
+  'menu.unmute': 'Sound on',
+
+  'dreamer.ines': 'The Lighthouse Keeper',
+  'dreamer.ines.name': 'Ines Varro',
+  'dreamer.ines.card':
+    "The storm took the boats' lights first, then the stars. Ines kept the lamp burning until dawn. Four boats came home.",
+  'dreamer.ines.clue':
+    'On the lamp lens: a smudge of grey wing-dust, as if someone had pressed their face to the glass and wept.',
+  'dreamer.ines.note': '"Some nights are heavy to carry. I was only holding this one for her." (the Moth)',
+  'dreamer.ines.fast': '"Quick feet. You\'d have made a fine lamp-runner."',
+  'dreamer.ines.slow': '"Took your time, didn\'t you? The sea doesn\'t wait, child."',
+  'dreamer.ines.caught': '"Careful. The past walks right behind you here."',
+  'dreamer.ines.perfect': '"Not a wasted step. The lamp\'s been waiting for you."',
+  'dreamer.ines.hint': "Ines's dream remembers light…",
+} as const;
+
+export type StringKey = keyof typeof en;

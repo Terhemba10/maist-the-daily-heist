@@ -1,0 +1,15 @@
+node_modules
+dist
+.DS_Store
+*.log
+
+# secrets and local config: never commit
+.env
+.env.*
+!.env.example
+.devvit/
+*.token
+
+# local tooling output
+coverage/
+docs/screens/_tmp/
