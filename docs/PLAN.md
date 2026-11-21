@@ -17,15 +17,20 @@ Story, look and rules: [`GAME_BIBLE.md`](GAME_BIBLE.md). Progress: [`STATUS.md`]
 
 ## Build order (show each step working before moving on)
 - [x] **0. Checks**: Node v26.13.0; name check (final name **Maist**, app `maist-game`); docs read.
-- [ ] **a. Scaffold**: Phaser template, login, hello post in the playtest subreddit.
-- [ ] **Vertical slice** (approval gate): title screen and logo; Night 1 (lighthouse keeper) with all 3 layers; the fold-fall; one twist per layer (tide doors, mirror page, echoes); the Pull ring; ability pick (Still, Blink, Lantern); vault flower; story card; wake-up shatter; 10 s onboarding; sound and mute; low quality mode; reduced motion. Screenshots and the test post link go to the owner. **Wait for approval.**
+- [x] **a. Scaffold**: Phaser template (later swapped for three.js), login, hello post in the playtest subreddit.
+- [x] **Vertical slice v1** (Phaser, 2D): reviewed 21 Nov. Approved: title, logo, palettes, Pull ring, ability button, type, story card, dialogue. Not approved: flat board, fold, shatter, small desktop board.
+- [ ] **Vertical slice v2** (approval gate): three.js 3D paper-diorama rooms themed per layer (bible §13), fold-through fall, glowing-fragment wake, bigger desktop board, code-composed synth-pop music with Music/SFX sliders, Easy/Medium/Hard, settings + themes + cosmetics, native-resolution rendering. Then screenshots and the test post go to the owner. **Wait for approval.**
+- [ ] ~~Vertical slice~~ (original v1 scope): title screen and logo; Night 1 (lighthouse keeper) with all 3 layers; the fold-fall; one twist per layer (tide doors, mirror page, echoes); the Pull ring; ability pick (Still, Blink, Lantern); vault flower; story card; wake-up shatter; 10 s onboarding; sound and mute; low quality mode; reduced motion. Screenshots and the test post link go to the owner. **Wait for approval.**
 - [ ] **b/c. Daily system**: date seed → night index + twist picks from the catalogue; layers 2–3 variants; countdown to the next dream; 1 scored attempt + practice.
-- [ ] **d. Reddit features**: daily scheduler post; per-day leaderboard (sorted set) and all-time "deepest dreamers"; streaks (bitfield per user per year) with Night-light shield and flair; the "Share my run" reply as the user under the pinned comment; tomorrow-twist vote; snoovatars on the leaderboard; finale vote.
-- [ ] **e. Polish**: gamepad, more dreamers, Memory Wall, near-miss messages, tests, README for judges, demo post in the public test subreddit.
+- [ ] **d. Reddit features**: daily scheduler post; per-day leaderboards **per difficulty** (sorted sets) and all-time "deepest dreamers"; settings/cosmetics saved per user in Redis; streaks (bitfield per user per year) with Night-light shield and flair; the "Share my run" reply as the user under the pinned comment; tomorrow-twist vote; snoovatars on the leaderboard; finale vote.
+- [ ] **Dream Archive** (with b/c and d): replay any past night (Night 1 to yesterday) as practice only (no leaderboard, no streak); future nights locked; story cards collected into the Memory Wall; "Night X of 30" on the title (the season calendar is already in `src/shared/logic/season.ts`).
+- [ ] **e. Polish**: ghost race (top run / friend's run) and challenge codes in the share reply; more dreamers, Memory Wall, near-miss messages, tests, README for judges, demo post in the public test subreddit.
+- [ ] **Stretch**: live 2-player co-op over Devvit realtime (server relays moves).
 - [ ] **Later, if time allows**: zh / ja / hi translations; an optional hint helper only if allowed by the Devvit rules.
 
 ## Tech
-- Phaser **4.2.1** (template default; filters, particles, tweens). All textures are baked from Canvas 2D at boot.
+- **three.js 0.187** for the dream (low-poly merged geometry, vertex-colour baked AO, one point light for the lantern, no shadow maps) and plain **HTML/CSS** for all UI. Phaser was removed in v2.
+- Performance target: ~60 fps in Chrome on the owner's Intel HD 520 laptop; smooth on a Redmi 15C in Low mode. If 3D can't hold that, fall back to a 2.5D renderer.
 - Game rules live in `src/shared/logic` (pure TypeScript, unit-tested with `node --test`).
 - Client text lives in `src/client/i18n/en.ts`.
 - Quality: automatic Low/High, `prefers-reduced-motion`, particle caps.

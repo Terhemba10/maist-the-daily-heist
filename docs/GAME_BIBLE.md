@@ -149,7 +149,7 @@ Abilities live in `src/shared/logic` so the rules are testable and the same on c
 
 | Moment | Animation | Reduced motion |
 |---|---|---|
-| Falling a layer | The room **folds like paper** along its middle (top half folds down over the bottom), the folded sheet drops away, dust streams upward, and the next room unfolds from above in the new palette | Crossfade |
+| Falling a layer | The **floor folds open like paper** (two halves hinge down from the centre line, props riding with them), and the camera **drops through the opening** into the next layer while sky, fog and light shift to the new palette (1.2–1.8 s) | Crossfade |
 | Twist: gravity | The room rotates 90° around its centre with a soft overshoot | Instant swap with a flash |
 | Twist: tide doors | Doors **shimmer** (alpha ripple and glow) 0.6 s before they switch | No shimmer, colour change only |
 | Twist: mirror | The room turns like a **book page** (scaleX 1 → 0 → 1 with a shading sweep) | Crossfade |
@@ -157,7 +157,7 @@ Abilities live in `src/shared/logic` so the rules are testable and the same on c
 | The Pull | The **heartbeat ring** pulses faster as time drops. Below 25 % the screen edges darken and soften | No pulse, colour shift only |
 | Vault | The vault **opens like a flower**: six paper petals rotate outward, and light rises | Fade open |
 | Memory | The orb rises, **blooms** into the story card, and the card unfolds | Fade |
-| Wake up | The screen **shatters into paper pieces** that tumble away | Fade to white |
+| Wake up | The floor **breaks into glowing paper fragments** that drift upward with light, then everything fades to the results | Fade |
 | Micro | Step ripples on the floor, button press squash, light phone vibration (10–20 ms) on steps into walls and on catches | No ripples, no vibration |
 
 ## 5. Retention loop
@@ -252,3 +252,69 @@ English first. Every string lives in `src/client/i18n/en.ts`, keyed by id. Chine
 - **Low quality mode** (automatic on ≤ 4 cores or ≤ 4 GB device memory, toggle in the menu): particles capped at 16 (High: 60), no camera filters, render resolution 1×.
 - Textures are baked once at boot (glows drawn into canvas textures, not live filters).
 - `prefers-reduced-motion`: no folds, shakes, ripples or trails; crossfades instead.
+
+---
+
+## 13. 3D direction (v2, after slice review on 21 Nov 2026)
+
+The approved parts stay: title screen and logo, layer palettes, Pull ring, ability button, typography, story card and dialogue style.
+
+- **Engine:** the dream is rendered in **three.js** (WebGL) with an **HTML/CSS overlay** for all UI. Phaser is removed.
+- **Look:** stylised low-poly "paper diorama" rooms floating in the sky. The floor slab and outer walls have real thickness, with a cut-away front. Paper edges are lit by thin glowing lines.
+- **Lighting:** soft and **baked**. Corner AO is baked into the floor's vertex colours, and props are darkened at their base. The moon gives a hemisphere fill plus one directional light, with **no real-time shadows**. The **Diver's lantern is a point light** that warms nearby tiles. The lighthouse beam is an additive cone plus a moving light pool.
+- **Camera:** a front-facing 3/4 view, so **up stays up**. A slight slow orbit sway, a gentle follow of the Diver, and the board fitted to the screen (it fills more of a desktop window).
+- **Resolution:** native device pixel ratio (crisp on phones and 4K); capped at 1.25x in Low mode.
+
+### Night 1 themes per layer (each layer looks different, not just recoloured)
+| Layer | Floor | Obstacles (objects, not blocks) | Doors | The Drop | Atmosphere |
+|---|---|---|---|---|---|
+| L1 *The Keeper's Rock* (dusk violet) | Wet stone flags with a sheen | Crates, coiled rope, water casks, lanterns | Wooden storm shutters that slide up and down with the tide | A spiral stone stair into the dark | The sea washes around and under the room, the lighthouse beam sweeps across the board, sea drizzle |
+| L2 *The Drowned Stair* (deep teal) | Sand and shell | Barnacled crates, an anchor, coral, kelp | Coral arches | A whirlpool stair | Caustic light rippling on the floor, rising bubbles, light shafts from above |
+| L3 *The Lamp Room* (ember gold) | Brass plates | Broken lens shards (glass), brass gears, oil barrels, log books | Brass gates | (none; the vault is here) | A giant lens ring glows behind, embers rise, the warm light flickers |
+
+Hidden doors look like an ordinary obstacle until the Lantern reveals them; then they turn to glowing paper and you can walk through.
+
+## 14. Difficulty
+The same daily dream at three difficulties, each with its own leaderboard.
+
+| | Easy | Medium | Hard |
+|---|---|---|---|
+| Pull | +30 % | as written | -20 % |
+| Echoes | 1, slower (6 s behind) | as written | one extra echo (3 s and 6 s behind) |
+| Twists | as written | as written | **+1 twist**: the mirror layer also has tide doors |
+| Moons for moves | par + 4 | par + 2 | par + 1 |
+
+## 15. Music and sound
+- **Original synth-pop loops composed in code** (Web Audio): drums (synth kick, noise snare and hats), a sub bass, chord stabs and a lead arpeggio. No samples and no third-party tracks, so there are no licences to manage.
+  - L1 *chill* (92 BPM, D minor, soft hats)
+  - L2 *faster* (112 BPM, adds a sixteenth-note arpeggio)
+  - L3 *intense* (128 BPM, four-on-the-floor, open hats and a rising lead)
+- Music starts only after the player taps **Dive**. **Separate Music and SFX volume sliders.**
+- The credits screen says: "Music and sound: original, generated in code for Maist."
+
+## 16. Settings, themes and cosmetics (saved per player)
+- **Settings:** music volume, SFX volume, graphics quality (Low/High), vibration, reduced motion (system/on/off) and colour theme.
+- **Themes:** **Moonlit** (default), **Rose Dream**, **Ocean**, **Midnight** and **High contrast** (colour-blind safe: Okabe-Ito colours, bright path edges, outlined obstacles).
+- **Diver cosmetics:**
+  - Cloak: Ink (default), Plum, Moss, Sand, Pearl (unlocked at 3 nights).
+  - Lantern: Amber (default), Mint, Rose, **Gold (7 nights)** and **Moonwhite (14 nights)**.
+  - Locked items show the streak needed.
+- Saved in browser storage now. Step d moves them to Redis per user so they follow the player across devices.
+
+## 17. Play with others
+- **Ghost race:** a run is a list of timed inputs, and the rules are deterministic, so any run can be replayed. You can race a faint ghost of **the day's top run** (per difficulty) or **a friend's run**. Stored in Redis as a compact input string.
+- **Challenge a friend:** the player-posted share reply includes a short code (e.g. `#a7k2`). Opening the post with that code loads the friend's ghost. It's never posted automatically.
+- **Live 2-player co-op (stretch, last):** Devvit realtime supports it in principle. Clients subscribe with `connectRealtime`; the server relays moves with `realtime.send`. That works for a turn-based grid, but there are no documented latency guarantees, so it stays the last priority.
+
+## 18. Priorities if time runs short
+1. Core fun, story, daily system and polish.
+2. Difficulty and themes.
+3. Ghost race.
+4. Co-op.
+
+## 19. Dream Archive
+- Players can replay **any past night of the season**, from Night 1 up to yesterday, to catch up on the story and collect missed story cards for their **Memory Wall**.
+- Archive runs are **practice only**: they never count for the daily leaderboard or the streak.
+- **Future nights stay locked** until their day arrives (based on the UTC date, so it's the same for everyone).
+- The title screen shows season progress: **"Night X of 30"**.
+- Season calendar: Night 1 is the season start date (`SEASON_START` in `src/shared/logic/season.ts`), and one night unlocks per UTC day. It is set to the day the first daily post goes live.

@@ -7,6 +7,7 @@ export default defineConfig({
       client: {
         build: {
           chunkSizeWarningLimit: 2000,
+          sourcemap: false,
         },
       },
     }),
