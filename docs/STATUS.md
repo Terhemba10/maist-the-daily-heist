@@ -3,51 +3,50 @@
 _Last updated: 21 Nov 2026_
 
 ## Where we are
-**Vertical slice v2 (3D) is built and waiting for the owner's approval.** Do not start step d (Reddit features) until approved.
+The 3D slice (v2) was **approved on 21 Nov**. The **daily system (step b/c) and the Reddit features (step d)** are now built and on the playtest. They need a live check on Reddit by the owner: Claude's browser can't open reddit.com.
 
-- Project: `C:\dev\maist\maist-game` (git, branch `main`, not pushed anywhere). Devvit app: **`maist-game`**. Reddit account: u/Dangerous_Lie_7980 (CLI token lives in the user profile, never in the repo).
-- **Playtest:** `npm run dev` (keep the "maist playtest" terminal tab running) → https://www.reddit.com/r/maist_game_dev/?playtest=maist-game. Every saved change is pushed to the test post. This subreddit is **private**; the owner still needs a **public** test subreddit (< 200 members) for judging.
-- Stack: Devvit Web 0.15.4, **three.js 0.187** (Phaser removed), Vite 8, Hono, TypeScript 6. Node v26.13.0.
-- Devvit docs: developers.reddit.com is blocked for Claude's tools, so they're read from `github.com/reddit/devvit-docs`.
+- Project: `C:\dev\maist\maist-game` (git, `main`, not pushed). Devvit app **`maist-game`**, account u/Dangerous_Lie_7980.
+- **Playtest:** "maist playtest" terminal tab (`npm run dev`) → https://www.reddit.com/r/maist_game_dev/?playtest=maist-game (v0.0.1.37+). This subreddit is private; a **public** test subreddit (< 200 members) is still needed for judging.
+- The post made before this update has no night data or share thread. Use the subreddit menu **"Maist: post tonight's dream"** to create a fresh one.
 
-## v1 review (21 Nov) → v2
-Approved and kept: title, logo, palettes, Pull ring, ability button, typography, story card, dialogue style.
-Redone in v2:
-- **3D paper dioramas** (three.js): low-poly rooms with thick slab and cut-away walls, glowing paper edges, baked corner AO, no shadow maps, the Diver's lantern as a real point light, slow camera sway and follow, front-facing 3/4 view (up stays up).
-- **Themed Night 1 layers:** L1 Keeper's Rock (wet stone, crates, rope bollards, casks, sea around the rock, sweeping lighthouse beam, drizzle); L2 Drowned Stair (sand and shells, barnacled crates, anchors, coral, kelp, caustics, light shafts, bubbles, portholes); L3 Lamp Room (brass plates, lens shards, gears, oil barrels, log books, giant lens rings, embers, flicker).
-- **Fall:** the floor halves hinge open, the sea fades, and the camera dives through to the next layer as colours shift (about 1.7 s), with light streaks rushing past.
-- **Wake:** the floor breaks into glowing paper fragments with sparks drifting upward and a bloom of light, then the results.
-- **Desktop board** fills the screen (the camera distance is solved to fit the free area between HUD margins).
+## Daily system (b/c)
+- **Season calendar:** `SEASON_START = 2026-11-21` (`src/shared/logic/season.ts`), so Night 1 is today (UTC) and one night unlocks per UTC day. **Change this to the real launch day before going public.**
+- **Dream generator** (`src/shared/logic/generator.ts`): Night 1 is hand-written; every other night is built from its number:
+  - a seeded 7×7 maze with loops, tide doors, a hidden-door shortcut, a Moth note in a dead end, and a memory key placed far from both start and vault;
+  - layer 1 twist: tide doors, loop rooms or gravity flip; layer 2 twist: the tomorrow-twist vote winner, or seeded; last layer: echoes;
+  - every 7th night is a 5-layer deep dream;
+  - par and Pull (60–90 s) are computed per layer.
+  - Tested: nights 2–60 are all solvable and deterministic.
+- **New twists:** gravity flip (up/down swapped) and loop rooms (edges wrap). Five twists are now implemented.
+- **Story text for all 30 nights** (`src/shared/dreams/story.ts`): name, role, card, clue, two reactive lines and a Moth note per dreamer.
+- **Deterministic runs** (`src/shared/logic/replay.ts`): the game steps in fixed 50 ms ticks and records inputs. The server **replays every run** to compute the official score, which blocks cheating, and the same record will drive ghost races.
+- **One scored attempt per day** (tonight's post, logged in, first attempt); everything else is practice. Countdown to the next dream on the title and splash.
+- **Dream Archive screen:** past nights are playable as practice, future nights locked, collected memories (story cards) viewable.
 
-## New in v2
-- **Music:** original synth-pop loops composed in code (L1 chill 92 BPM, L2 112 BPM with arpeggio, L3 128 BPM intense). Starts only after **Dive**. Separate **Music** and **SFX** sliders.
-- **Difficulty:** Easy / Medium / Hard (shared rules in `src/shared/logic/difficulty.ts`; separate leaderboards come in step d).
-- **Settings** (saved per player in browser storage for now): music, SFX, graphics Low/High, vibration, reduced motion (system/on/off), colour theme (Moonlit, Rose Dream, Ocean, Midnight, High contrast), cloak and lantern colours (Pearl cloak at 3 nights, Gold lantern at 7, Moonwhite at 14). Credits line included.
-- **Resolution:** native device pixel ratio (Low caps it at 1.25×) plus **adaptive resolution** that steps down if frames run long.
-- **Season calendar and Dream Archive rules** (`src/shared/logic/season.ts`): "Night X of 30" on the title; past nights replayable as practice; future nights locked. The Archive screen itself comes with the daily system.
-- Bundle: game 171 KB gzipped (was 372 KB with Phaser), splash 3 KB.
-
-## Measured on the owner's laptop (Intel HD 520, real Chrome via Playwright)
-| View | Quality | fps (L1 / L2 / L3) |
-|---|---|---|
-| 1440×900 | High | 59 / 60 / 60 |
-| 1920×1080 | High | 58 / 58 / 58 (adaptive resolution) |
-| 1440×900 | Low | 60 / 60 / 60 |
-| 393×852 (phone size) | Low | 60 / 60 / 60 |
-
-Not yet measured on a real Redmi 15C.
+## Reddit features (d)
+- **Daily post:** scheduler cron `0 0 * * *` (UTC) creates tonight's post (`postData {night}`), resolves yesterday's twist vote, and adds a distinguished, pinned **share thread** comment. The moderator menu can force a post; the app-install trigger creates one too.
+- **Leaderboards:** per night × difficulty (Redis sorted sets, top 10 plus "you"); all-time **Deepest dreamers** (total layers cleared in scored runs). Snoovatars are shown, with an initial as fallback.
+- **Streaks:** consecutive scored nights, best, and a **Night-light** shield (earned every 7 nights, max 1, covers one missed night). Cosmetic unlocks use the real streak.
+- **Flair (opt-in only):** "Dreamer · N nights". The player must switch on *Streak flair* in Settings, and moderators can disable it in the app's subreddit settings. It never replaces a flair the player set themselves.
+- **Share my run:** posted **as the user** (`runAs: 'USER'`, `asUser: ["SUBMIT_COMMENT"]`) as a **reply to the pinned share comment**, only after an explicit confirm that shows the exact text. The text is built on the server (no free text): the spoiler-free line, difficulty and a challenge code. Until the app is approved, Devvit posts it from the app account, or as the owner in playtest.
+- **Tomorrow-twist vote:** 3 options, one vote per player; the winner becomes tomorrow's layer 2 twist.
+- **Settings sync:** player settings are saved in Redis (per user), so they follow the player across devices.
+- **Data care:** per-night keys expire after 40 days and per-user keys after 60 days of inactivity; post-delete trigger cleans post data.
+- Ghost records are stored server-side (top run per night/difficulty and every run's challenge code), ready for the ghost race.
 
 ## Checks
-20 rules tests pass (`npm run test:unit`), typecheck and lint are clean, build OK. Screenshots: `docs/screens/`.
+- 26 unit tests pass (rules, difficulty, season, generator on 59 nights, replay); typecheck and lint clean; build OK (game 177 KB gzipped, splash ~9 KB).
+- Local screenshots of the new screens: `docs/screens/21–25`.
+- **Not yet verified live on Reddit:** server endpoints, the scheduler, share-as-user, flair and leaderboards (needs the owner to play the post).
 
 ## Known gaps
-- Night 1 is hard-coded (no daily seed yet); only 3 of the 32 twists are implemented.
-- Streaks are a local placeholder (the settings screen shows unlocks from it); real streaks come in step d.
-- No server features yet (leaderboards, streak/flair, share reply, votes, scheduler, ghost race, archive screen).
-- Theme changes during a dream rebuild the room in place; the quality toggle changes resolution live, but antialiasing only changes after a reload.
+- Rooms for nights 2–30 reuse Night 1's three themed prop sets (lighthouse, drowned, lamp room); per-dreamer themes (bakery, bus, clock tower…) are next.
+- Story cards for nights 2–30 use a generic memory-orb illustration; only Night 1 has a hand-drawn scene.
+- Reactive dialogue for nights 2–30 has 2 lines (good/bad) instead of 4.
+- Ghost race and challenge-code playback in the client aren't built yet (the server side is ready).
+- Finale vote (Night 30) not built yet.
 
-## Next (after approval)
-1. Daily system: date seed → night + twists, countdown, 1 scored attempt + practice, Dream Archive screen.
-2. Step d: scheduler post, leaderboards per day and difficulty plus all-time, streak + Night-light + flair, share reply as the user, twist vote, snoovatars, settings in Redis.
-3. Step e: ghost race and challenge codes, Memory Wall, more dreamers, public test subreddit, judges' README.
-4. Stretch: realtime co-op.
+## Next
+1. Owner playtest on Reddit; fix anything the logs show.
+2. Per-dreamer room themes and card art; ghost race; finale vote.
+3. Public test subreddit, set `SEASON_START`, judges' README, demo video.

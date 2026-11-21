@@ -16,7 +16,7 @@ Every night, one person in the city of Lowmere wakes up missing a memory. A thie
 
 It's for anyone who likes short daily puzzles and a slow-burn mystery. It plays on phones (tap and swipe) and on desktop (keyboard or gamepad).
 
-> **Status:** vertical slice (Night 1, *The Lighthouse Keeper*). The daily schedule, leaderboards, streaks, share comments and the twist vote come next. See [`docs/STATUS.md`](docs/STATUS.md).
+> **Status:** playable daily game in testing. See [`docs/STATUS.md`](docs/STATUS.md).
 
 ## How to play
 
@@ -33,7 +33,10 @@ A 10-second "how to play" appears the first time you play.
 
 ## For moderators: installing and running
 
-- Install the app on your subreddit. A moderator menu item, **"Maist: create tonight's dream post"**, creates the game post. (A daily automatic post is planned.)
+- Install the app on your subreddit. A new dream post appears **every day at 00:00 UTC**, with a pinned share thread. Moderators can also post one with the subreddit menu item **"Maist: post tonight's dream"**.
+- Each night has its own leaderboards (Easy, Medium, Hard) and there's an all-time **Deepest dreamers** board. Only the first attempt on tonight's post is scored; everything else is practice.
+- **Streak flair** ("Dreamer · 7 nights") is opt-in for each player, and you can turn it off for the whole community in the app's subreddit settings.
+- **Share my run** posts a short, spoiler-free reply *as the player* under the pinned share comment, only after they confirm the exact text.
 - The app doesn't ask players for any personal information, links nowhere off Reddit and never posts on anyone's behalf without them pressing a clearly labelled button.
 - All art and sound are generated in code; there are no third-party assets.
 

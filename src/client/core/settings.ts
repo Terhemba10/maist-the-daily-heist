@@ -16,8 +16,10 @@ type Saved = {
   lantern: string;
   difficulty: Difficulty;
   onboarded: boolean;
-  /** Consecutive nights played. Local placeholder until streaks live on the server (step d). */
+  /** Consecutive nights played (from the server when available). */
   streak: number;
+  /** Opt-in: show the streak as user flair in the subreddit. */
+  flair: boolean;
 };
 
 const KEY = 'maist.settings.v2';
@@ -66,6 +68,7 @@ export const settings: Saved = {
   difficulty: stored.difficulty ?? 'medium',
   onboarded: stored.onboarded ?? false,
   streak: stored.streak ?? 0,
+  flair: stored.flair ?? false,
 };
 
 const listeners = new Set<() => void>();

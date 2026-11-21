@@ -117,21 +117,26 @@ export function passable(s: LayerState, p: Vec): boolean {
 
 /** Mirror twist swaps left and right. */
 export function resolveDir(s: LayerState, dir: Dir): Dir {
-  if (!s.def.mirrorControls) return dir;
-  if (dir === 'left') return 'right';
-  if (dir === 'right') return 'left';
+  if (s.def.mirrorControls && (dir === 'left' || dir === 'right')) return dir === 'left' ? 'right' : 'left';
+  if (s.def.flipControls && (dir === 'up' || dir === 'down')) return dir === 'up' ? 'down' : 'up';
   return dir;
+}
+
+/** Loop twist: positions off the board wrap to the opposite edge. */
+function wrapPos(s: LayerState, p: Vec): Vec {
+  if (!s.def.wrap) return p;
+  return { x: (p.x + s.board.w) % s.board.w, y: (p.y + s.board.h) % s.board.h };
 }
 
 export function move(s: LayerState, input: Dir): MoveEvent {
   if (s.status !== 'playing') return 'ignored';
   const dir = resolveDir(s, input);
   const step = DIRS[dir];
-  let target = add(s.pos, step);
+  let target = wrapPos(s, add(s.pos, step));
   let event: MoveEvent = 'moved';
 
   if (!passable(s, target)) {
-    const beyond = add(target, step);
+    const beyond = wrapPos(s, add(target, step));
     if (s.blinkArmed && inBounds(s.board, beyond) && passable(s, beyond)) {
       target = beyond;
       s.blinkArmed = false;

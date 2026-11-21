@@ -148,6 +148,43 @@ export function drawLighthouseCard(c: Ctx, w: number, h: number): void {
   c.fillRect(203, 60, 2, 6);
 }
 
+/** Story card art for dreamers without a hand-drawn scene: a memory orb in folded paper rings. */
+export function drawMemoryCard(c: Ctx, w: number, h: number, seed: number, initial: string): void {
+  const r = rng(seed);
+  const hue = Math.floor(r() * 360);
+  const sky = c.createLinearGradient(0, 0, 0, h);
+  sky.addColorStop(0, `hsl(${hue}, 35%, 10%)`);
+  sky.addColorStop(1, `hsl(${(hue + 40) % 360}, 40%, 24%)`);
+  c.fillStyle = sky;
+  c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 40; i++) {
+    c.fillStyle = `rgba(255,248,235,${0.2 + r() * 0.5})`;
+    c.fillRect(r() * w, r() * h * 0.7, 1.2, 1.2);
+  }
+  const cx = w / 2;
+  const cy = h * 0.52;
+  for (let i = 5; i > 0; i--) {
+    c.strokeStyle = `hsla(${(hue + 30) % 360}, 60%, 80%, ${0.12 + i * 0.05})`;
+    c.lineWidth = 2;
+    c.beginPath();
+    c.ellipse(cx, cy, 22 + i * 16, 10 + i * 7, (r() - 0.5) * 0.3, 0, Math.PI * 2);
+    c.stroke();
+  }
+  const g = c.createRadialGradient(cx, cy, 2, cx, cy, 40);
+  g.addColorStop(0, '#fffaf0');
+  g.addColorStop(0.35, '#ffe2a6');
+  g.addColorStop(1, 'rgba(255,210,122,0)');
+  c.fillStyle = g;
+  c.beginPath();
+  c.arc(cx, cy, 40, 0, Math.PI * 2);
+  c.fill();
+  c.fillStyle = 'rgba(40,24,10,0.75)';
+  c.font = `28px ${SERIF}`;
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillText(initial, cx, cy + 1);
+}
+
 export type IconKind = 'still' | 'blink' | 'lantern';
 
 export function drawIcon(kind: IconKind, c: Ctx): void {

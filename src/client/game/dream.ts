@@ -15,7 +15,9 @@ import {
   type LayerState,
   type MoveEvent,
 } from '../../shared/logic/layer.ts';
+import { codeOf, STEP_MS, type RunRecord } from '../../shared/logic/replay.ts';
 import { playStyle, type LayerResult } from '../../shared/logic/score.ts';
+import { story } from '../../shared/dreams/story.ts';
 import type { AbilityId, Dir, DreamDef } from '../../shared/logic/types.ts';
 import { audio } from '../core/audio.ts';
 import { theme, type LayerLook } from '../core/palette.ts';
@@ -30,8 +32,8 @@ import type { Hud } from '../ui/hud.ts';
 type Anim = { t: number; dur: number; step: (k: number) => void; done?: () => void };
 
 export type DreamEvents = {
-  onCard: (results: LayerResult[], quoteKey: StringKey) => void;
-  onResults: (results: LayerResult[]) => void;
+  onCard: (results: LayerResult[], quote: string) => void;
+  onResults: (results: LayerResult[], record: RunRecord) => void;
 };
 
 const FALL_DEPTH = 11;
@@ -53,6 +55,10 @@ export class DreamRun {
   private lastBeat = 0;
   private off: () => void;
   private time = 0;
+  /** Fixed-step clock: the rules advance in 50 ms steps so the server can replay the run exactly. */
+  private acc = 0;
+  private steps = 0;
+  readonly record: RunRecord;
 
   constructor(
     base: DreamDef,
@@ -64,13 +70,21 @@ export class DreamRun {
     startLayer = 0
   ) {
     this.dream = applyDifficulty(base, difficulty);
+    this.record = { a: ability, l: [] };
     this.off = world.onFrame((dt, time) => this.frame(dt, time));
     this.startLayer(startLayer, null);
   }
 
+  /** Which of the three looks (dusk, deep, ember) a layer uses; 5-layer deep dreams share them. */
+  private themeIndex(i: number): number {
+    const n = this.dream.layers.length;
+    if (n <= 3) return Math.min(2, i);
+    return Math.min(2, Math.round((i * 2) / (n - 1)));
+  }
+
   private look(i: number): LayerLook {
     const th = theme(settings.theme);
-    return th.layers[i] ?? th.layers[0];
+    return th.layers[this.themeIndex(i)] ?? th.layers[0];
   }
 
   private def(i: number) {
@@ -83,11 +97,14 @@ export class DreamRun {
     this.layerIndex = i;
     const def = this.def(i);
     this.state = createLayer(def, this.ability);
+    this.steps = 0;
+    this.acc = 0;
+    this.record.l[i] = { i: [] };
     const room = prebuilt ?? this.makeRoom(i);
     this.setRoom(room);
     this.world.setLook(this.look(i), this.look(i), 1);
     audio.playMusic(i);
-    this.hud.setLayer(t(k_(`layer.name.${i + 1}`)));
+    this.hud.setLayer(this.dream.layers.length > 3 ? t('layer.name.n', { n: i + 1 }) : t(k_(`layer.name.${i + 1}`)));
     this.hud.setKey(false);
     this.hud.setCharge(this.state.charges);
     const announce = () => toast(t(k_(`twist.${def.twist}`)), 92, 2600);
@@ -106,7 +123,7 @@ export class DreamRun {
     const def = this.def(i);
     // The mirror layer arrives as the un-mirrored page, then turns.
     const rows = def.twist === 'mirror' ? mirrorRows(def.rows) : def.rows;
-    return new RoomView(rows, i, this.look(i));
+    return new RoomView(rows, this.themeIndex(i), this.look(i));
   }
 
   private setRoom(room: RoomView): void {
@@ -130,7 +147,7 @@ export class DreamRun {
     if (this.busy) return;
     const old = this.room;
     const rows = this.state.def.rows;
-    const room = new RoomView(rows, this.layerIndex, this.look(this.layerIndex));
+    const room = new RoomView(rows, this.themeIndex(this.layerIndex), this.look(this.layerIndex));
     this.world.scene.add(room.root);
     old.dispose();
     this.room = room;
@@ -146,12 +163,14 @@ export class DreamRun {
 
   input(dir: Dir): void {
     if (this.busy || this.paused || this.state.status !== 'playing') return;
+    this.record.l[this.layerIndex]?.i.push([this.steps, codeOf(dir)]);
     const ev = move(this.state, dir);
     this.react(ev);
   }
 
   useAbility(): void {
     if (this.busy || this.paused || this.state.status !== 'playing') return;
+    this.record.l[this.layerIndex]?.i.push([this.steps, codeOf('ability')]);
     const r = useAbility(this.state);
     if (r === 'no-charge') {
       audio.bump();
@@ -185,7 +204,7 @@ export class DreamRun {
       toast(t('event.key'));
       this.hud.setKey(true);
     }
-    if (ev === 'note') toast(t(k_(`dreamer.${this.dream.dreamer}.note`)), '24%', 4200);
+    if (ev === 'note') toast(story(this.dream.dreamer).note, '24%', 4200);
     if (ev === 'caught') this.onCaught();
     if (ev === 'drop') this.fall();
     if (ev === 'vault') this.openVault();
@@ -215,11 +234,16 @@ export class DreamRun {
     finished.forEach((a) => a.done?.());
     const s = this.state;
     if (!this.paused && !this.busy && s.status === 'playing') {
-      const ev = tick(s, dt * 1000);
-      if (ev === 'caught') this.onCaught();
-      if (ev === 'woke') {
-        this.recordResult(false);
-        this.wake();
+      this.acc += dt * 1000;
+      while (this.acc >= STEP_MS && s.status === 'playing') {
+        this.acc -= STEP_MS;
+        this.steps += 1;
+        const ev = tick(s, STEP_MS);
+        if (ev === 'caught') this.onCaught();
+        if (ev === 'woke') {
+          this.recordResult(false);
+          this.wake();
+        }
       }
     }
     this.room.update(s, dt, time);
@@ -380,7 +404,7 @@ export class DreamRun {
   private pageTurn(done: () => void): void {
     const swap = () => {
       const old = this.room;
-      const room = new RoomView(this.state.def.rows, this.layerIndex, this.look(this.layerIndex));
+      const room = new RoomView(this.state.def.rows, this.themeIndex(this.layerIndex), this.look(this.layerIndex));
       this.world.scene.add(room.root);
       old.dispose();
       this.setRoom(room);
@@ -413,7 +437,9 @@ export class DreamRun {
     audio.bloom();
     buzz(30);
     this.room.openVault();
-    const quote = k_(`dreamer.${this.dream.dreamer}.${playStyle(this.results, this.dream.layers.length, MOVE_SLACK[this.difficulty])}`);
+    const style = playStyle(this.results, this.dream.layers.length, MOVE_SLACK[this.difficulty]);
+    const st = story(this.dream.dreamer);
+    const quote = style === 'fast' || style === 'perfect' ? st.good : st.bad;
     const start = this.room.vaultCoreWorld();
     if (!start || reducedMotion()) {
       window.setTimeout(() => this.events.onCard(this.results, quote), 600);
@@ -442,6 +468,13 @@ export class DreamRun {
     );
   }
 
+  /** Quit early (from settings): the current layer counts as woken. */
+  quit(): void {
+    if (this.busy || this.state.status !== 'playing') return;
+    this.recordResult(false);
+    this.wake();
+  }
+
   /** The dream breaks into glowing paper fragments that drift upward; then the results. */
   wake(): void {
     this.busy = true;
@@ -467,7 +500,7 @@ export class DreamRun {
       },
       () => bloom.removeFromParent()
     );
-    window.setTimeout(() => this.events.onResults(this.results), reducedMotion() ? 600 : 2300);
+    window.setTimeout(() => this.events.onResults(this.results, this.record), reducedMotion() ? 600 : 2300);
   }
 
   /** For screenshots and reviews: jump straight to the vault on the last layer. */

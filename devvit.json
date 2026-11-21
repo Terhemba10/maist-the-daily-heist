@@ -20,7 +20,7 @@
   "menu": {
     "items": [
       {
-        "label": "Maist: create tonight's dream post",
+        "label": "Maist: post tonight's dream",
         "description": "Posts the daily Maist dream",
         "location": "subreddit",
         "forUserType": "moderator",
@@ -29,16 +29,40 @@
     ]
   },
   "triggers": {
-    "onAppInstall": "/internal/triggers/on-app-install"
+    "onAppInstall": "/internal/triggers/on-app-install",
+    "onPostDelete": "/internal/triggers/on-post-delete"
   },
   "scripts": {
     "build": "vite build",
     "dev": "vite build --watch"
   },
   "permissions": {
-    "redis": true
+    "redis": true,
+    "reddit": {
+      "enable": true,
+      "asUser": [
+        "SUBMIT_COMMENT"
+      ]
+    }
   },
   "dev": {
     "subreddit": "maist_game_dev"
+  },
+  "scheduler": {
+    "tasks": {
+      "daily-post": {
+        "endpoint": "/internal/scheduler/daily-post",
+        "cron": "0 0 * * *"
+      }
+    }
+  },
+  "settings": {
+    "subreddit": {
+      "streakFlair": {
+        "type": "boolean",
+        "label": "Let players opt in to showing their Maist streak as user flair",
+        "defaultValue": true
+      }
+    }
   }
 }

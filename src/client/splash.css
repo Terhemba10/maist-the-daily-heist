@@ -109,3 +109,10 @@ body {
     animation: none;
   }
 }
+
+.status {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  color: rgba(255, 226, 166, 0.9);
+  min-height: 1em;
+}

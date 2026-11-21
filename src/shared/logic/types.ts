@@ -17,7 +17,7 @@ export type Cell =
 
 export type AbilityId = 'still' | 'blink' | 'lantern';
 
-export type TwistId = 'tide-doors' | 'mirror' | 'echoes';
+export type TwistId = 'tide-doors' | 'mirror' | 'echoes' | 'gravity-flip' | 'loop';
 
 export type LayerDef = {
   /** Map rows, top to bottom. Legend: # wall, . floor, S start, F drop, V vault, K key, N note, D/d tide doors, H hidden door. */
@@ -31,6 +31,10 @@ export type LayerDef = {
   tidePeriodMs?: number;
   /** Mirror twist: left and right controls are swapped. */
   mirrorControls?: boolean;
+  /** Gravity flip: up and down controls are swapped. */
+  flipControls?: boolean;
+  /** Loop rooms: walking off one edge brings you back on the opposite edge. */
+  wrap?: boolean;
   /** Echoes: one echo per delay, replaying your steps that many ms behind you. */
   echoDelaysMs?: readonly number[];
 };
