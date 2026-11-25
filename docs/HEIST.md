@@ -1,0 +1,24 @@
+# Maist: The Daily Heist (branch `daily-heist`)
+
+A turn-based tactics game played inside a Reddit post, on phone and desktop.
+
+- **Every night, three new 10x10 maps** (Easy, Hard, Difficult), the same for everyone, built from the date.
+  Every map is checked by a solver to be beatable within its AP.
+- **A crew of three** shares one pool of Action Points (AP). 1 AP per step.
+  - Vale, the Shaper: **Fold** (2 AP) opens a wall next to her.
+  - Wren, the Ghost: **Fade** (1 AP) can't be seen for 2 turns.
+  - Oto, the Chemist: **Haze** (3 AP) puts a guard within 3 tiles to sleep for 2 turns.
+  - **Wait** (1 AP) lets the guards move.
+- **Guards** see their own tile and 2-3 tiles ahead (red). Easy: static guards. Hard: 4 patrols. Difficult: 3 patrols, 2 watchers that turn toward you, and fog.
+- Get anyone onto the vault ◈ to crack the layer.
+- **Limbo and the Kick:** run out of AP or crew and you fall into Limbo. On tonight's post, the game can post a call
+  for help (as you) under the pinned thread. Anyone who replies **WAKE UP** sends you a Kick: +6 AP and your crew comes back.
+- **Score:** 200 per vault + 100 per AP left + 50 per layer without a Kick. One scored run per day; the server replays
+  every run to compute the score. Daily leaderboard with Snoovatars, streaks, and "Share to the thread".
+- Languages: English, 中文, 日本語, Deutsch, हिन्दी.
+
+Code: `src/shared/heist/engine.ts` (rules, generator, replay, tests in `engine.test.ts`), `src/server/routes/heist.ts`
+(API), `src/client/heist.ts` + `heist.css` (game), `src/client/i18n/heist.ts` (text).
+The 3D Maist game is untouched on the `main` branch.
+
+Before going public: set `SEASON_START` in `src/shared/logic/season.ts` to launch day.

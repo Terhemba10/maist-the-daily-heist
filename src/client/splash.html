@@ -4,39 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" type="text/css" href="splash.css" />
-    <title>Maist</title>
+    <title>Maist: The Daily Heist</title>
   </head>
   <body>
     <main class="splash">
-      <div class="sky" aria-hidden="true"></div>
-      <p class="season">Season 1 · The Moth</p>
-      <svg class="logo" viewBox="0 0 560 160" role="img" aria-label="Maist">
-        <defs>
-          <linearGradient id="ink" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#fbf5ff" />
-            <stop offset="1" stop-color="#b9a8e6" />
-          </linearGradient>
-          <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="4" result="b" />
-            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-          <radialGradient id="lamp">
-            <stop offset="0" stop-color="#fff8e6" />
-            <stop offset="1" stop-color="#ffd27a" stop-opacity="0" />
-          </radialGradient>
-        </defs>
-        <text x="280" y="122" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="300" font-size="120" letter-spacing="16" fill="url(#ink)" filter="url(#soft)">maıst</text>
-        <g class="moth" transform="translate(296 30)">
-          <circle r="22" fill="url(#lamp)" />
-          <ellipse cx="-8" cy="0" rx="9" ry="5" transform="rotate(-28 -8 0)" fill="#ffe7b3" />
-          <ellipse cx="8" cy="0" rx="9" ry="5" transform="rotate(28 8 0)" fill="#ffe7b3" />
-          <ellipse cx="0" cy="1" rx="2" ry="6" fill="#fff8e6" />
-        </g>
-      </svg>
-      <p class="tagline">a mind heist, three layers deep</p>
-      <p class="night" id="night"></p>
+      <p class="kicker" id="night">MAIST</p>
+      <h1 class="logo">The Daily Heist</h1>
+      <p class="tag">Three dream layers · one shared AP pool · new maps every day</p>
+      <div class="crew" aria-hidden="true"><span class="c0">◆</span><span class="c1">◐</span><span class="c2">✦</span><span class="g">◇</span><span class="v">◈</span></div>
       <p class="status" id="status"></p>
-      <button class="dive" id="dive" type="button">Enter the dream</button>
+      <button class="go" id="go" type="button">Start the heist</button>
       <p class="who" id="who"></p>
       <p class="who" id="countdown"></p>
     </main>

@@ -1,0 +1,805 @@
+import { audio } from './core/audio.ts';
+import { saveSettings, settings } from './core/settings.ts';
+import { getLang, LANGS, setLang, t, type Key, type Lang } from './i18n/heist.ts';
+import type { BoardRes, HeistInit, KickRes, LimboRes, RunRes, ShareRes } from '../shared/heist/api.ts';
+import {
+  apply,
+  buildHeist,
+  canApply,
+  DIRS,
+  guardVision,
+  idx,
+  layerScore,
+  newLayerState,
+  SIZE,
+  SQUAD,
+  type Action,
+  type Dir,
+  type HeistDef,
+  type LayerState,
+  type OpId,
+} from '../shared/heist/engine.ts';
+import { currentNight, msUntilNextDream } from '../shared/logic/season.ts';
+
+// ------------------------------------------------------------------ server
+
+async function call<T>(path: string, body?: unknown): Promise<T | null> {
+  try {
+    const res = await fetch(`/api/${path}`, body === undefined ? undefined : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    if (!res.ok || !(res.headers.get('content-type') ?? '').includes('json')) return null;
+    const data: T = await res.json();
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+// ------------------------------------------------------------------ state
+
+type Mode = 'title' | 'play' | 'over';
+
+const app = {
+  init: null as HeistInit | null,
+  night: currentNight(),
+  heist: null as HeistDef | null,
+  mode: 'title' as Mode,
+  scored: false,
+  li: 0,
+  s: null as LayerState | null,
+  record: [] as Action[][],
+  sel: 0 as OpId,
+  targeting: false,
+  kickTimer: 0,
+  nextAt: Date.now() + msUntilNextDream(),
+};
+
+const ui = document.getElementById('ui') as HTMLElement;
+const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''): HTMLElementTagNameMap[K] => {
+  const el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (text) el.textContent = text;
+  return el;
+};
+const opName = (o: number): string => t((SQUAD[o]?.key ?? 'shaper') as Key);
+const tierName = (i: number): string => t((['easy', 'hard', 'difficult'] as const)[i] ?? 'easy');
+
+const saveKey = () => `heist.run.${app.night}`;
+function saveProgress(): void {
+  if (!app.scored) return;
+  try {
+    window.localStorage.setItem(saveKey(), JSON.stringify(app.record));
+  } catch {
+    /* ignore */
+  }
+}
+function loadProgress(): Action[][] | null {
+  try {
+    const raw = window.localStorage.getItem(saveKey());
+    if (!raw) return null;
+    const v: unknown = JSON.parse(raw);
+    return Array.isArray(v) ? (v as Action[][]) : null;
+  } catch {
+    return null;
+  }
+}
+function clearProgress(): void {
+  try {
+    window.localStorage.removeItem(saveKey());
+  } catch {
+    /* ignore */
+  }
+}
+
+const canScore = () => !!app.init && app.init.loggedIn && app.init.postNight === app.init.today && !app.init.scored;
+
+// ------------------------------------------------------------------ toast
+
+let toastTimer = 0;
+function toast(msg: string): void {
+  let el = document.querySelector<HTMLElement>('.toast');
+  if (!el) {
+    el = h('div', 'toast');
+    document.body.append(el);
+  }
+  el.textContent = msg;
+  el.classList.add('on');
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => el?.classList.remove('on'), 2200);
+}
+
+// ------------------------------------------------------------------ title
+
+function fmtCountdown(): string {
+  const s = Math.max(0, Math.floor((app.nextAt - Date.now()) / 1000));
+  const p = (v: number) => String(v).padStart(2, '0');
+  return `${p(Math.floor(s / 3600))}:${p(Math.floor((s % 3600) / 60))}:${p(s % 60)}`;
+}
+
+function topBar(): HTMLElement {
+  const bar = h('div', 'topbar');
+  const who = h('div', 'who');
+  if (app.init?.snoovatar) {
+    const img = h('img', 'snoo');
+    img.src = app.init.snoovatar;
+    img.alt = '';
+    who.append(img);
+  }
+  if (app.init?.username) who.append(h('span', '', `u/${app.init.username}`));
+  if (app.init?.streak.count) who.append(h('span', 'streak', t('streak', { n: app.init.streak.count })));
+  const tools = h('div', 'tools');
+  const sel = h('select', 'lang');
+  sel.setAttribute('aria-label', t('language'));
+  for (const [code, label] of Object.entries(LANGS)) {
+    const o = h('option', '', label);
+    o.value = code;
+    if (code === getLang()) o.selected = true;
+    sel.append(o);
+  }
+  sel.addEventListener('change', () => {
+    setLang(sel.value as Lang);
+    render();
+  });
+  const snd = h('button', 'icon', settings.sfx > 0 ? '🔊' : '🔇');
+  snd.setAttribute('aria-label', t('sound'));
+  snd.addEventListener('click', () => {
+    const on = settings.sfx === 0;
+    saveSettings({ sfx: on ? 0.8 : 0, music: on ? 0.6 : 0 });
+    audio.applyVolumes();
+    snd.textContent = on ? '🔊' : '🔇';
+  });
+  tools.append(sel, snd);
+  bar.append(who, tools);
+  return bar;
+}
+
+function renderTitle(): void {
+  ui.replaceChildren();
+  const wrap = h('main', 'title-screen');
+  wrap.append(topBar());
+  const hero = h('div', 'hero');
+  hero.append(h('p', 'kicker', `MAIST · ${t('night', { n: app.night })}`), h('h1', 'logo', t('title')), h('p', 'tag', t('tag')));
+  const squad = h('div', 'squad-row');
+  SQUAD.forEach((sq, i) => {
+    const c = h('div', `crew c${i}`);
+    c.append(h('span', 'glyph', sq.glyph), h('b', '', opName(i)), h('small', '', `${t(sq.ability)} · ${sq.cost} AP`));
+    squad.append(c);
+  });
+  hero.append(squad);
+
+  const status = h('p', 'status');
+  const init = app.init;
+  if (!init) status.textContent = t('offline');
+  else if (init.postNight !== init.today) status.textContent = t('archived');
+  else if (init.scored) status.textContent = `${t('scoredDone', { score: init.scored.score })}${init.scored.rank ? ` · ${t('rankLine', { rank: init.scored.rank })}` : ''}`;
+  else if (!init.loggedIn) status.textContent = t('offline');
+
+  const actions = h('div', 'actions');
+  if (canScore()) {
+    const saved = loadProgress();
+    const go = h('button', 'btn primary', saved?.some((l) => l.length) ? t('resume') : t('start'));
+    go.addEventListener('click', () => startRun(true, saved));
+    actions.append(go);
+  }
+  const prac = h('button', canScore() ? 'btn' : 'btn primary', t('practice'));
+  prac.addEventListener('click', () => startRun(false, null));
+  const row = h('div', 'links');
+  const lb = h('button', 'link', t('board'));
+  lb.addEventListener('click', () => void showBoard());
+  const how = h('button', 'link', t('howto'));
+  how.addEventListener('click', showHowTo);
+  row.append(lb, how);
+  actions.append(prac, row);
+  const cd = h('p', 'countdown', t('next', { t: fmtCountdown() }));
+  wrap.append(hero, status, actions, cd);
+  ui.append(wrap);
+}
+
+window.setInterval(() => {
+  const cd = document.querySelector('.countdown');
+  if (cd) cd.textContent = t('next', { t: fmtCountdown() });
+}, 1000);
+
+// ------------------------------------------------------------------ modals
+
+function modal(title: string, body: HTMLElement, buttons: HTMLElement[] = []): HTMLElement {
+  closeModal();
+  const back = h('div', 'modal-back');
+  const box = h('div', 'modal');
+  box.append(h('h2', '', title), body);
+  const row = h('div', 'modal-actions');
+  const close = h('button', 'btn', t('close'));
+  close.addEventListener('click', closeModal);
+  row.append(...buttons, close);
+  box.append(row);
+  back.append(box);
+  back.addEventListener('click', (e) => {
+    if (e.target === back) closeModal();
+  });
+  document.body.append(back);
+  return box;
+}
+function closeModal(): void {
+  document.querySelector('.modal-back')?.remove();
+}
+
+function showHowTo(): void {
+  const body = h('ol', 'howto');
+  (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const).forEach((k) => body.append(h('li', '', t(k))));
+  modal(t('howto'), body);
+}
+
+async function showBoard(): Promise<void> {
+  const body = h('div', 'board-list', t('loading'));
+  modal(`${t('board')} · ${t('night', { n: app.night })}`, body);
+  const res = await call<BoardRes>(`leaderboard?night=${app.night}`);
+  body.textContent = '';
+  if (!res || !res.rows.length) {
+    body.textContent = t('empty');
+    return;
+  }
+  const rows = [...res.rows];
+  if (res.me && !rows.some((r) => r.me)) rows.push(res.me);
+  for (const r of rows) {
+    const line = h('div', `lb-row${r.me ? ' me' : ''}`);
+    const av = h('span', 'av');
+    if (r.snoovatar) {
+      const img = h('img');
+      img.src = r.snoovatar;
+      img.alt = '';
+      av.append(img);
+    } else av.textContent = (r.name[0] ?? '?').toUpperCase();
+    line.append(h('span', 'rk', `#${r.rank}`), av, h('span', 'nm', `u/${r.name}`), h('span', 'sc', String(r.score)));
+    body.append(line);
+  }
+}
+
+// ------------------------------------------------------------------ run flow
+
+function startRun(scored: boolean, saved: Action[][] | null): void {
+  audio.unlock();
+  app.heist = buildHeist(app.night);
+  app.scored = scored;
+  app.record = [];
+  app.li = 0;
+  app.mode = 'play';
+  app.s = newLayerState(app.heist.layers[0]!);
+  // Resume a saved scored run by replaying it.
+  if (scored && saved) {
+    for (const [i, acts] of saved.entries()) {
+      const def = app.heist.layers[i];
+      if (!def) break;
+      app.li = i;
+      app.record[i] = [];
+      let s = newLayerState(def);
+      for (const a of acts) {
+        if (!canApply(s, a).ok) break;
+        s = apply(s, a);
+        app.record[i]!.push(a);
+      }
+      app.s = s;
+      if (s.status !== 'cleared') break;
+      if (i < 2) {
+        app.li = i + 1;
+        app.s = newLayerState(app.heist.layers[i + 1]!);
+        app.record[i + 1] = app.record[i + 1] ?? [];
+      }
+    }
+  }
+  app.record[app.li] = app.record[app.li] ?? [];
+  app.sel = firstActive();
+  app.targeting = false;
+  audio.playMusic(app.li);
+  renderPlay(true);
+  if (app.s.status === 'limbo') showLimbo();
+}
+
+function firstActive(): OpId {
+  const i = app.s?.ops.findIndex((o) => !o.out) ?? 0;
+  return (i < 0 ? 0 : i) as OpId;
+}
+
+function act(a: Action): void {
+  const s = app.s;
+  if (!s || app.mode !== 'play') return;
+  const c = canApply(s, a);
+  if (!c.ok) {
+    audio.bump();
+    toast(c.reason === 'no AP' ? t('noAp') : t('blocked'));
+    return;
+  }
+  const n = apply(s, a);
+  app.s = n;
+  app.record[app.li]!.push(a);
+  saveProgress();
+  app.targeting = false;
+  if (a.t === 'm') audio.step();
+  else if (a.t === 'a') audio.ability();
+  else audio.click();
+  for (const o of n.lastCaught) {
+    audio.caught();
+    toast(t('caught', { name: opName(o) }));
+    buzz(80);
+  }
+  if (n.ops[app.sel]?.out) app.sel = firstActive();
+  if (n.ap > 0 && n.ap <= 3 && n.status === 'play') audio.heartbeat();
+  renderPlay(false);
+  if (n.status === 'cleared') window.setTimeout(showCleared, 350);
+  else if (n.status === 'limbo') window.setTimeout(showLimbo, 450);
+}
+
+function buzz(ms: number): void {
+  try {
+    if (settings.vibration) navigator.vibrate?.(ms);
+  } catch {
+    /* ignore */
+  }
+}
+
+function showCleared(): void {
+  const s = app.s;
+  if (!s) return;
+  audio.drop();
+  const pts = layerScore({ tier: s.def.tier, cleared: true, ap: s.ap, kicks: s.kicks, moves: 0 });
+  const body = h('div', 'cleared');
+  body.append(h('p', 'big', '◈'), h('p', '', t('clearedSub', { pts, ap: s.ap })));
+  const last = app.li >= 2;
+  const next = h('button', 'btn primary', last ? t('finish') : t('nextLayer', { i: app.li + 2 }));
+  next.addEventListener('click', () => {
+    closeModal();
+    if (last) void finish();
+    else {
+      app.li += 1;
+      app.record[app.li] = [];
+      app.s = newLayerState(app.heist!.layers[app.li]!);
+      app.sel = 0;
+      saveProgress();
+      audio.playMusic(app.li);
+      renderPlay(true);
+    }
+  });
+  const box = modal(t('cleared'), body, [next]);
+  box.querySelector('.modal-actions .btn:last-child')?.remove();
+}
+
+function kicksUsed(): number {
+  return app.record.flat().filter((a) => a.t === 'kick').length;
+}
+
+function showLimbo(): void {
+  audio.caught();
+  const body = h('div', 'limbo');
+  body.append(h('p', '', t('limboSub')));
+  const msg = h('p', 'small');
+  body.append(msg);
+  const buttons: HTMLElement[] = [];
+  if (app.scored) {
+    const ask = h('button', 'btn primary', t('callKick'));
+    ask.addEventListener('click', async () => {
+      ask.setAttribute('disabled', '');
+      const res = await call<LimboRes>('limbo', { night: app.night, record: { v: 1, layers: app.record } });
+      msg.textContent = res?.message ?? t('blocked');
+      if (res?.ok) {
+        msg.textContent = `${res.message} ${t('kickWait')}`;
+        pollKick(msg, ask);
+      } else ask.removeAttribute('disabled');
+    });
+    buttons.push(ask);
+    if (app.init?.kicks.asked) pollKick(msg, ask);
+  } else {
+    const retry = h('button', 'btn primary', t('retry'));
+    retry.addEventListener('click', () => {
+      closeModal();
+      app.record[app.li] = [];
+      app.s = newLayerState(app.heist!.layers[app.li]!);
+      app.sel = 0;
+      renderPlay(true);
+    });
+    buttons.push(retry);
+  }
+  const end = h('button', 'btn', t('endRun'));
+  end.addEventListener('click', () => {
+    closeModal();
+    void finish();
+  });
+  buttons.push(end);
+  const box = modal(t('limbo'), body, buttons);
+  box.classList.add('limbo-box');
+  box.querySelector('.modal-actions .btn:last-child')?.remove();
+}
+
+function pollKick(msg: HTMLElement, ask: HTMLElement): void {
+  window.clearInterval(app.kickTimer);
+  const check = async () => {
+    const k = await call<KickRes>('kick');
+    if (!k) return;
+    if (k.granted > kicksUsed()) {
+      window.clearInterval(app.kickTimer);
+      msg.textContent = t('kickGot');
+      ask.textContent = t('useKick');
+      ask.removeAttribute('disabled');
+      ask.onclick = () => {
+        closeModal();
+        if (!app.s) return;
+        app.s = apply(app.s, { t: 'kick' });
+        app.record[app.li]!.push({ t: 'kick' });
+        saveProgress();
+        audio.drop();
+        app.sel = firstActive();
+        renderPlay(false);
+      };
+    }
+  };
+  void check();
+  app.kickTimer = window.setInterval(() => void check(), 8000);
+}
+
+async function finish(): Promise<void> {
+  window.clearInterval(app.kickTimer);
+  app.mode = 'over';
+  audio.bloom();
+  const record = { v: 1 as const, layers: app.record };
+  ui.replaceChildren();
+  const wrap = h('main', 'results');
+  wrap.append(topBar(), h('h1', 'logo small', t('results')));
+  const box = h('div', 'res-box', t('loading'));
+  wrap.append(box);
+  ui.append(wrap);
+
+  const res = app.init ? await call<RunRes>('run', { night: app.night, record, scored: app.scored }) : null;
+  const results = res?.results ?? localResults();
+  const score = res?.score ?? results.reduce((n, r) => n + layerScore(r), 0);
+  if (res?.scored) {
+    clearProgress();
+    if (app.init) {
+      app.init.scored = { score, rank: res.rank };
+      app.init.streak = res.streak;
+    }
+  }
+  box.textContent = '';
+  box.append(h('p', 'score', t('pts', { score })));
+  if (res?.scored && res.rank) box.append(h('p', 'rank', t('rankTonight', { rank: res.rank })));
+  else if (!app.scored) box.append(h('p', 'rank', t('practiceDone')));
+  const layers = h('div', 'res-layers');
+  results.forEach((r, i) => {
+    const row = h('div', `res-row ${r.cleared ? 'ok' : 'fail'}`);
+    row.append(h('span', '', `${t('layer', { i: i + 1 })} · ${tierName(i)}`), h('span', '', r.cleared ? `◈ ${layerScore(r)}` : '—'));
+    layers.append(row);
+  });
+  box.append(layers);
+  const acts = h('div', 'actions');
+  if (res?.scored) {
+    const share = h('button', 'btn primary', t('share'));
+    share.addEventListener('click', async () => {
+      share.setAttribute('disabled', '');
+      const r = await call<ShareRes>('share', {});
+      toast(r?.message ?? t('blocked'));
+    });
+    acts.append(share);
+  }
+  const lb = h('button', 'btn', t('board'));
+  lb.addEventListener('click', () => void showBoard());
+  const back = h('button', 'btn', t('backTitle'));
+  back.addEventListener('click', () => {
+    app.mode = 'title';
+    audio.stopMusic();
+    render();
+  });
+  acts.append(lb, back);
+  box.append(acts);
+}
+
+function localResults() {
+  const out = [];
+  for (let i = 0; i < app.record.length; i++) {
+    const def = app.heist!.layers[i]!;
+    let s = newLayerState(def);
+    for (const a of app.record[i]!) if (canApply(s, a).ok) s = apply(s, a);
+    out.push({ tier: def.tier, cleared: s.status === 'cleared', ap: s.ap, kicks: s.kicks, moves: 0 });
+  }
+  return out;
+}
+
+// ------------------------------------------------------------------ board view
+
+let boardEl: HTMLElement | null = null;
+const tiles: HTMLElement[] = [];
+const opEls: HTMLElement[] = [];
+const guardEls = new Map<number, HTMLElement>();
+
+function visibleSet(s: LayerState): Set<number> | null {
+  if (!s.def.fog) return null;
+  const v = new Set<number>();
+  for (const o of s.ops) {
+    if (o.out) continue;
+    for (let dy = -2; dy <= 2; dy++)
+      for (let dx = -2; dx <= 2; dx++) {
+        const x = o.x + dx;
+        const y = o.y + dy;
+        if (x >= 0 && y >= 0 && x < SIZE && y < SIZE) v.add(idx(x, y));
+      }
+  }
+  v.add(idx(s.def.vault[0], s.def.vault[1]));
+  return v;
+}
+
+function moveTargets(s: LayerState): Map<number, Action> {
+  const m = new Map<number, Action>();
+  const o = s.ops[app.sel];
+  if (!o || o.out || s.status !== 'play') return m;
+  if (app.targeting) {
+    const spec = SQUAD[app.sel];
+    if (spec.ability === 'fold') {
+      for (const [dx, dy] of Object.values(DIRS)) {
+        const a: Action = { t: 'a', o: app.sel, x: o.x + dx, y: o.y + dy };
+        if (canApply(s, a).ok) m.set(idx(o.x + dx, o.y + dy), a);
+      }
+    } else if (spec.ability === 'haze') {
+      for (const g of s.guards) {
+        const a: Action = { t: 'a', o: app.sel, x: g.x, y: g.y };
+        if (canApply(s, a).ok) m.set(idx(g.x, g.y), a);
+      }
+    }
+    return m;
+  }
+  for (const d of Object.keys(DIRS) as Dir[]) {
+    const a: Action = { t: 'm', o: app.sel, d };
+    if (canApply(s, a).ok) {
+      const [dx, dy] = DIRS[d];
+      m.set(idx(o.x + dx, o.y + dy), a);
+    }
+  }
+  return m;
+}
+
+function renderPlay(fresh: boolean): void {
+  const s = app.s;
+  if (!s) return;
+  if (fresh || !boardEl || !document.body.contains(boardEl)) buildPlay();
+  const vis = visibleSet(s);
+  const seen = new Set<number>();
+  for (const g of s.guards) {
+    if (vis && !vis.has(idx(g.x, g.y))) continue;
+    for (const [x, y] of guardVision(s, g, s.def.range)) seen.add(idx(x, y));
+  }
+  const targets = moveTargets(s);
+  for (let i = 0; i < SIZE * SIZE; i++) {
+    const el = tiles[i]!;
+    const tile = s.grid[i];
+    const hidden = vis !== null && !vis.has(i);
+    el.className = `tile${tile === 1 ? ' wall' : ''}${tile === 2 ? ' vault' : ''}${!hidden && seen.has(i) ? ' seen' : ''}${targets.has(i) ? (app.targeting ? ' target' : ' move') : ''}${hidden ? ' fog' : ''}`;
+  }
+  s.ops.forEach((o, i) => {
+    const el = opEls[i]!;
+    el.style.transform = `translate(calc(var(--cell) * ${o.x}), calc(var(--cell) * ${o.y}))`;
+    el.classList.toggle('out', o.out);
+    el.classList.toggle('faded', o.fade > 0);
+    el.classList.toggle('sel', i === app.sel && !o.out);
+    if (s.lastCaught.includes(i)) {
+      el.classList.remove('hit');
+      void el.offsetWidth;
+      el.classList.add('hit');
+    }
+  });
+  for (const g of s.guards) {
+    const el = guardEls.get(g.id);
+    if (!el) continue;
+    el.style.transform = `translate(calc(var(--cell) * ${g.x}), calc(var(--cell) * ${g.y}))`;
+    el.dataset.facing = g.facing;
+    el.classList.toggle('stunned', g.stunned > 0);
+    el.classList.toggle('hidden', !!vis && !vis.has(idx(g.x, g.y)));
+    el.classList.toggle('watcher', g.kind === 'watcher');
+  }
+  // HUD
+  const ap = document.querySelector<HTMLElement>('.ap-num');
+  if (ap) ap.textContent = String(s.ap);
+  const bar = document.querySelector<HTMLElement>('.ap-fill');
+  if (bar) bar.style.width = `${Math.min(100, (s.ap / s.def.ap) * 100)}%`;
+  document.querySelector('.hud')?.classList.toggle('low', s.ap <= 3);
+  document.querySelectorAll<HTMLElement>('.op-card').forEach((c, i) => {
+    const o = s.ops[i];
+    c.classList.toggle('sel', i === app.sel);
+    c.classList.toggle('out', !!o?.out);
+  });
+  const ab = document.querySelector<HTMLElement>('.ability-btn');
+  if (ab) {
+    const spec = SQUAD[app.sel];
+    ab.textContent = app.targeting ? t('cancel') : `${t(spec.ability)} · ${spec.cost} AP`;
+    ab.title = t(`${spec.ability}Desc` as Key);
+    ab.classList.toggle('on', app.targeting);
+  }
+  const hint = document.querySelector<HTMLElement>('.hint');
+  if (hint) {
+    const spec = SQUAD[app.sel];
+    hint.textContent = app.targeting ? (spec.ability === 'fold' ? t('pickWall') : t('pickGuard')) : s.def.fog ? t('fog') : t(`${spec.ability}Desc` as Key);
+  }
+}
+
+function buildPlay(): void {
+  const s = app.s!;
+  ui.replaceChildren();
+  const wrap = h('main', `play tier-${s.def.tier}`);
+  const hud = h('div', 'hud');
+  const left = h('div', 'hud-left');
+  left.append(h('span', 'kicker', `${t('night', { n: app.night })} · ${app.scored ? t('scoredTag') : t('practiceTag')}`), h('b', 'layer-name', `${t('layer', { i: app.li + 1 })} · ${tierName(app.li)}`));
+  const apBox = h('div', 'ap');
+  const num = h('span', 'ap-num', String(s.ap));
+  const meter = h('div', 'ap-meter');
+  meter.append(h('div', 'ap-fill'));
+  apBox.append(num, h('small', '', t('ap')), meter);
+  hud.append(left, apBox);
+
+  const stage = h('div', 'stage');
+  boardEl = h('div', 'board');
+  tiles.length = 0;
+  opEls.length = 0;
+  guardEls.clear();
+  for (let i = 0; i < SIZE * SIZE; i++) {
+    const el = h('div', 'tile');
+    const x = i % SIZE;
+    const y = Math.floor(i / SIZE);
+    el.addEventListener('click', () => onTile(x, y));
+    tiles.push(el);
+    boardEl.append(el);
+  }
+  for (const g of s.guards) {
+    const el = h('div', 'guard');
+    el.append(h('span', 'eye'));
+    el.addEventListener('click', () => onTile(app.s!.guards.find((q) => q.id === g.id)!.x, app.s!.guards.find((q) => q.id === g.id)!.y));
+    guardEls.set(g.id, el);
+    boardEl.append(el);
+  }
+  SQUAD.forEach((sq, i) => {
+    const el = h('div', `op c${i}`);
+    el.append(h('span', '', sq.glyph));
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      select(i as OpId);
+    });
+    opEls.push(el);
+    boardEl!.append(el);
+  });
+  stage.append(boardEl);
+  bindSwipe(boardEl);
+
+  const panel = h('div', 'panel');
+  const cards = h('div', 'op-cards');
+  SQUAD.forEach((sq, i) => {
+    const c = h('button', `op-card c${i}`);
+    c.append(h('span', 'glyph', sq.glyph), h('span', 'nm', opName(i)), h('small', '', `${i + 1}`));
+    c.addEventListener('click', () => select(i as OpId));
+    cards.append(c);
+  });
+  const row = h('div', 'act-row');
+  const ab = h('button', 'btn ability-btn');
+  ab.addEventListener('click', onAbility);
+  const wait = h('button', 'btn', `${t('wait')} · 1 AP`);
+  wait.title = t('waitDesc');
+  wait.addEventListener('click', () => act({ t: 'w' }));
+  const how = h('button', 'btn icon', '?');
+  how.addEventListener('click', showHowTo);
+  row.append(ab, wait, how);
+  panel.append(cards, row, h('p', 'hint'));
+  wrap.append(hud, stage, panel);
+  ui.append(wrap);
+  wrap.classList.add('dive');
+  if (!settings.onboarded) {
+    saveSettings({ onboarded: true });
+    showHowTo();
+  }
+}
+
+function select(i: OpId): void {
+  if (!app.s || app.s.ops[i]?.out) return;
+  if (app.sel !== i) audio.click();
+  app.sel = i;
+  app.targeting = false;
+  renderPlay(false);
+}
+
+function onAbility(): void {
+  const s = app.s;
+  if (!s) return;
+  if (app.targeting) {
+    app.targeting = false;
+    renderPlay(false);
+    return;
+  }
+  const spec = SQUAD[app.sel];
+  if (s.ap < spec.cost) {
+    audio.bump();
+    toast(t('noAp'));
+    return;
+  }
+  if (spec.ability === 'fade') {
+    act({ t: 'a', o: app.sel, x: 0, y: 0 });
+    return;
+  }
+  app.targeting = true;
+  if (moveTargets(s).size === 0) {
+    app.targeting = false;
+    audio.bump();
+    toast(spec.ability === 'fold' ? t('pickWall') : t('pickGuard'));
+  }
+  renderPlay(false);
+}
+
+function onTile(x: number, y: number): void {
+  const s = app.s;
+  if (!s || app.mode !== 'play') return;
+  audio.unlock();
+  const opAt = s.ops.findIndex((o) => !o.out && o.x === x && o.y === y);
+  if (!app.targeting && opAt >= 0) {
+    select(opAt as OpId);
+    return;
+  }
+  const a = moveTargets(s).get(idx(x, y));
+  if (a) act(a);
+  else if (app.targeting) {
+    app.targeting = false;
+    renderPlay(false);
+  }
+}
+
+function moveDir(d: Dir): void {
+  act({ t: 'm', o: app.sel, d });
+}
+
+function bindSwipe(el: HTMLElement): void {
+  let sx = 0;
+  let sy = 0;
+  let down = false;
+  el.addEventListener('pointerdown', (e) => {
+    sx = e.clientX;
+    sy = e.clientY;
+    down = true;
+  });
+  el.addEventListener('pointerup', (e) => {
+    if (!down) return;
+    down = false;
+    const dx = e.clientX - sx;
+    const dy = e.clientY - sy;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 30) return;
+    moveDir(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'r' : 'l') : dy > 0 ? 'd' : 'u');
+  });
+}
+
+window.addEventListener('keydown', (e) => {
+  if (app.mode !== 'play' || document.querySelector('.modal-back')) {
+    if (e.key === 'Escape') closeModal();
+    return;
+  }
+  const k = e.key.toLowerCase();
+  const map: Record<string, Dir> = { arrowup: 'u', w: 'u', arrowdown: 'd', s: 'd', arrowleft: 'l', a: 'l', arrowright: 'r', d: 'r' };
+  const d = map[k];
+  if (d) {
+    e.preventDefault();
+    moveDir(d);
+  } else if (k === '1' || k === '2' || k === '3') select((Number(k) - 1) as OpId);
+  else if (k === 'e') onAbility();
+  else if (k === 'q' || k === ' ') {
+    e.preventDefault();
+    act({ t: 'w' });
+  } else if (k === 'escape' && app.targeting) {
+    app.targeting = false;
+    renderPlay(false);
+  }
+});
+
+// ------------------------------------------------------------------ boot
+
+function render(): void {
+  document.documentElement.lang = getLang();
+  if (app.mode === 'play') renderPlay(true);
+  else if (app.mode === 'title') renderTitle();
+}
+
+void (async () => {
+  render();
+  const init = await call<HeistInit>('init');
+  if (init) {
+    app.init = init;
+    app.night = init.postNight;
+    app.nextAt = Date.now() + init.nextMs;
+  }
+  if (app.mode === 'title') render();
+})();

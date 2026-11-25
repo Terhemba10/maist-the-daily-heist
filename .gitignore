@@ -13,3 +13,4 @@ dist
 # local tooling output
 coverage/
 docs/screens/_tmp/
+heist.tgz
