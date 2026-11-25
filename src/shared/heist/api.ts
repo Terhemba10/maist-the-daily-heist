@@ -16,6 +16,8 @@ export type HeistInit = {
   streak: Streak;
   /** Kicks other players have sent to you tonight. */
   kicks: { granted: number; asked: boolean };
+  /** How many crews have a scored run on this post's night (the leaderboard size). */
+  crews: number;
   nextMs: number;
 };
 

@@ -1,5 +1,6 @@
 import { context, requestExpandedMode } from '@devvit/web/client';
 import type { HeistInit } from '../shared/heist/api.ts';
+import { ART, isArtName } from './art/index.ts';
 import { currentNight, msUntilNextDream } from '../shared/logic/season.ts';
 
 const $ = (id: string) => document.getElementById(id);
@@ -8,6 +9,13 @@ const who = $('who');
 const night = $('night');
 const status = $('status');
 const countdown = $('countdown');
+const crews = $('crews');
+
+// The hero scene: crew sneaking past a sleeping bot to the vault (inline SVG, no requests).
+for (const el of document.querySelectorAll<HTMLElement>('[data-art]')) {
+  const name = el.dataset.art;
+  if (isArtName(name)) el.innerHTML = ART[name];
+}
 
 // Expanded mode can only open from a real user gesture, so this is the one tap target in the feed.
 go?.addEventListener('click', (e) => {
@@ -40,6 +48,7 @@ void (async () => {
     if (!res.ok) return;
     const data: HeistInit = await res.json();
     nextAt = Date.now() + data.nextMs;
+    if (crews && data.crews > 0) crews.textContent = `🔥 ${data.crews} crew${data.crews === 1 ? '' : 's'} played tonight`;
     if (who && data.username) who.textContent = `u/${data.username}${data.streak.count ? ` · 🔥 ${data.streak.count}` : ''}`;
     if (status) {
       if (data.postNight !== data.today) status.textContent = 'An older night: practice only';

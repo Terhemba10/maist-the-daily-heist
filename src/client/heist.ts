@@ -1,3 +1,4 @@
+import { CREW_ART, sprite } from './art/index.ts';
 import { audio } from './core/audio.ts';
 import { saveSettings, settings } from './core/settings.ts';
 import { getLang, LANGS, setLang, t, type Key, type Lang } from './i18n/heist.ts';
@@ -9,6 +10,7 @@ import {
   DIRS,
   guardVision,
   idx,
+  KICK_AP,
   layerScore,
   newLayerState,
   SIZE,
@@ -50,6 +52,10 @@ const app = {
   sel: 0 as OpId,
   targeting: false,
   kickTimer: 0,
+  /** First-play tutorial step (1-4), 0 when off. */
+  tut: 0,
+  tutAt: 0,
+  lastAp: 0,
   nextAt: Date.now() + msUntilNextDream(),
 };
 
@@ -61,6 +67,8 @@ const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''): 
   return el;
 };
 const opName = (o: number): string => t((SQUAD[o]?.key ?? 'shaper') as Key);
+/** Just the crew member's name ("Vale", "维尔", "ヴェイル"), without their title. */
+const shortName = (o: number): string => (opName(o).split(/[,·（(]/)[0] ?? opName(o)).trim();
 const tierName = (i: number): string => t((['easy', 'hard', 'difficult'] as const)[i] ?? 'easy');
 
 const saveKey = () => `heist.run.${app.night}`;
@@ -117,7 +125,8 @@ function fmtCountdown(): string {
 
 function topBar(): HTMLElement {
   const bar = h('div', 'topbar');
-  const who = h('div', 'who');
+  const who = h('div', 'who chip');
+  if (!app.init?.snoovatar) who.append(h('span', 'dot'));
   if (app.init?.snoovatar) {
     const img = h('img', 'snoo');
     img.src = app.init.snoovatar;
@@ -125,8 +134,9 @@ function topBar(): HTMLElement {
     who.append(img);
   }
   if (app.init?.username) who.append(h('span', '', `u/${app.init.username}`));
+  if (!app.init?.username) who.append(h('span', '', 'MAIST'));
   if (app.init?.streak.count) who.append(h('span', 'streak', t('streak', { n: app.init.streak.count })));
-  const tools = h('div', 'tools');
+  const tools = h('div', 'tools chip');
   const sel = h('select', 'lang');
   sel.setAttribute('aria-label', t('language'));
   for (const [code, label] of Object.entries(LANGS)) {
@@ -161,7 +171,9 @@ function renderTitle(): void {
   const squad = h('div', 'squad-row');
   SQUAD.forEach((sq, i) => {
     const c = h('div', `crew c${i}`);
-    c.append(h('span', 'glyph', sq.glyph), h('b', '', opName(i)), h('small', '', `${t(sq.ability)} · ${sq.cost} AP`));
+    const pic = h('span', 'bob');
+    pic.append(sprite(CREW_ART[i] ?? 'vale', 'blink'));
+    c.append(pic, h('b', '', shortName(i)), h('small', '', `${t(sq.ability)} · ${sq.cost} AP`));
     squad.append(c);
   });
   hero.append(squad);
@@ -313,8 +325,11 @@ function act(a: Action): void {
   saveProgress();
   app.targeting = false;
   if (a.t === 'm') audio.step();
-  else if (a.t === 'a') audio.ability();
-  else audio.click();
+  else if (a.t === 'a') {
+    audio.ability();
+    retrigger(opEls[a.o], 'cast');
+  } else audio.click();
+  advanceTutorial();
   for (const o of n.lastCaught) {
     audio.caught();
     toast(t('caught', { name: opName(o) }));
@@ -341,7 +356,9 @@ function showCleared(): void {
   audio.drop();
   const pts = layerScore({ tier: s.def.tier, cleared: true, ap: s.ap, kicks: s.kicks, moves: 0 });
   const body = h('div', 'cleared');
-  body.append(h('p', 'big', '◈'), h('p', '', t('clearedSub', { pts, ap: s.ap })));
+  const vault = sprite('vault', 'big open');
+  body.append(vault, h('p', '', t('clearedSub', { pts, ap: s.ap })));
+  document.querySelector('.tile.vault .art')?.classList.add('open');
   const last = app.li >= 2;
   const next = h('button', 'btn primary', last ? t('finish') : t('nextLayer', { i: app.li + 2 }));
   next.addEventListener('click', () => {
@@ -440,7 +457,7 @@ async function finish(): Promise<void> {
   const record = { v: 1 as const, layers: app.record };
   ui.replaceChildren();
   const wrap = h('main', 'results');
-  wrap.append(topBar(), h('h1', 'logo small', t('results')));
+  wrap.append(topBar(), h('h1', 'logo small', t('results')), celebration());
   const box = h('div', 'res-box', t('loading'));
   wrap.append(box);
   ui.append(wrap);
@@ -462,7 +479,10 @@ async function finish(): Promise<void> {
   const layers = h('div', 'res-layers');
   results.forEach((r, i) => {
     const row = h('div', `res-row ${r.cleared ? 'ok' : 'fail'}`);
-    row.append(h('span', '', `${t('layer', { i: i + 1 })} · ${tierName(i)}`), h('span', '', r.cleared ? `◈ ${layerScore(r)}` : '—'));
+    const def = app.heist?.layers[i];
+    const name = h('span', 'res-name', `${t('layer', { i: i + 1 })} · ${tierName(i)}`);
+    if (def) name.append(h('small', '', t('par', { par: def.par, used: r.cleared ? def.ap + r.kicks * KICK_AP - r.ap : '—' })));
+    row.append(name, h('b', '', r.cleared ? `◈ ${layerScore(r)}` : '—'));
     layers.append(row);
   });
   box.append(layers);
@@ -499,6 +519,65 @@ function localResults() {
   return out;
 }
 
+/** Crew around a spinning vault, with twinkling sparks. */
+function celebration(): HTMLElement {
+  const box = h('div', 'celebrate');
+  box.append(sprite('vault', 'c-vault open'));
+  CREW_ART.forEach((name, i) => {
+    const b = h('span', `c-crew c-crew${i} bob`);
+    b.append(sprite(name, 'blink'));
+    box.append(b);
+  });
+  ['#ffd166', '#00f0ff', '#b388ff', '#7cffb2', '#ff2e88'].forEach((c, i) => {
+    const sp = h('span', `spark s${i}`, '✦');
+    sp.style.color = c;
+    box.append(sp);
+  });
+  return box;
+}
+
+/** Restart a one-shot CSS animation class. */
+function retrigger(el: HTMLElement | undefined, cls: string): void {
+  if (!el) return;
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+}
+
+/** Float "−1 AP" (or "+6 AP" after a Pull) next to the AP number. */
+function apFloat(delta: number): void {
+  const host = document.querySelector('.ap');
+  if (!host || delta === 0) return;
+  const f = h('span', `ap-float${delta > 0 ? ' up' : ''}`, `${delta > 0 ? '+' : '−'}${Math.abs(delta)} ${t('ap')}`);
+  host.append(f);
+  window.setTimeout(() => f.remove(), 900);
+}
+
+// ------------------------------------------------------------------ tutorial
+
+const TUT = ['tut1', 'tut2', 'tut3', 'tut4'] as const;
+
+function renderTutorial(): void {
+  document.querySelector('.tip')?.remove();
+  if (!app.tut) return;
+  const key = TUT[app.tut - 1];
+  if (!key) return;
+  const tip = h('button', 'tip');
+  tip.append(h('b', '', `${t('tutStep', { i: app.tut, n: TUT.length })}: `), document.createTextNode(t(key)));
+  tip.addEventListener('click', () => advanceTutorial(true));
+  app.tutAt = Date.now();
+  document.querySelector('.panel')?.append(tip);
+}
+
+/** Tapping the bubble always advances; playing advances it only after the step has been readable for 3 s. */
+function advanceTutorial(tapped = false): void {
+  if (!app.tut) return;
+  if (!tapped && Date.now() - app.tutAt < 3000) return;
+  app.tut = app.tut >= TUT.length ? 0 : app.tut + 1;
+  if (!app.tut) saveSettings({ onboarded: true });
+  renderTutorial();
+}
+
 // ------------------------------------------------------------------ board view
 
 let boardEl: HTMLElement | null = null;
@@ -520,6 +599,19 @@ function visibleSet(s: LayerState): Set<number> | null {
   }
   v.add(idx(s.def.vault[0], s.def.vault[1]));
   return v;
+}
+
+/** Put a sprite on its tile; on a change, face the direction of travel and hop. */
+function place(el: HTMLElement, x: number, y: number, isGuard: boolean): void {
+  const px = Number(el.dataset.x ?? x);
+  const py = Number(el.dataset.y ?? y);
+  if (px !== x || py !== y) {
+    if (!isGuard && x !== px) el.dataset.face = x < px ? 'l' : 'r';
+    retrigger(el.querySelector<HTMLElement>('.hop') ?? undefined, 'go');
+  }
+  el.dataset.x = String(x);
+  el.dataset.y = String(y);
+  el.style.transform = `translate(calc(var(--cell) * ${x}), calc(var(--cell) * ${y}))`;
 }
 
 function moveTargets(s: LayerState): Map<number, Action> {
@@ -566,24 +658,21 @@ function renderPlay(fresh: boolean): void {
     const el = tiles[i]!;
     const tile = s.grid[i];
     const hidden = vis !== null && !vis.has(i);
-    el.className = `tile${tile === 1 ? ' wall' : ''}${tile === 2 ? ' vault' : ''}${!hidden && seen.has(i) ? ' seen' : ''}${targets.has(i) ? (app.targeting ? ' target' : ' move') : ''}${hidden ? ' fog' : ''}`;
+    el.className = `tile${(i % SIZE) % 2 === Math.floor(i / SIZE) % 2 ? '' : ' alt'}${tile === 1 ? ' wall' : ''}${tile === 2 ? ' vault' : ''}${!hidden && seen.has(i) ? ' seen' : ''}${targets.has(i) ? (app.targeting ? ' target' : ' move') : ''}${hidden ? ' fog' : ''}`;
   }
   s.ops.forEach((o, i) => {
     const el = opEls[i]!;
-    el.style.transform = `translate(calc(var(--cell) * ${o.x}), calc(var(--cell) * ${o.y}))`;
-    el.classList.toggle('out', o.out);
+    place(el, o.x, o.y, false);
     el.classList.toggle('faded', o.fade > 0);
     el.classList.toggle('sel', i === app.sel && !o.out);
-    if (s.lastCaught.includes(i)) {
-      el.classList.remove('hit');
-      void el.offsetWidth;
-      el.classList.add('hit');
-    }
+    if (s.lastCaught.includes(i)) el.classList.add('spotted');
+    else if (!o.out) el.classList.remove('spotted');
+    el.classList.toggle('out', o.out);
   });
   for (const g of s.guards) {
     const el = guardEls.get(g.id);
     if (!el) continue;
-    el.style.transform = `translate(calc(var(--cell) * ${g.x}), calc(var(--cell) * ${g.y}))`;
+    place(el, g.x, g.y, true);
     el.dataset.facing = g.facing;
     el.classList.toggle('stunned', g.stunned > 0);
     el.classList.toggle('hidden', !!vis && !vis.has(idx(g.x, g.y)));
@@ -592,6 +681,9 @@ function renderPlay(fresh: boolean): void {
   // HUD
   const ap = document.querySelector<HTMLElement>('.ap-num');
   if (ap) ap.textContent = String(s.ap);
+  if (!fresh) apFloat(s.ap - app.lastAp);
+  app.lastAp = s.ap;
+  if (s.status === 'cleared') document.querySelector('.tile.vault .art')?.classList.add('open');
   const bar = document.querySelector<HTMLElement>('.ap-fill');
   if (bar) bar.style.width = `${Math.min(100, (s.ap / s.def.ap) * 100)}%`;
   document.querySelector('.hud')?.classList.toggle('low', s.ap <= 3);
@@ -637,20 +729,33 @@ function buildPlay(): void {
     const el = h('div', 'tile');
     const x = i % SIZE;
     const y = Math.floor(i / SIZE);
+    if (x === s.def.vault[0] && y === s.def.vault[1]) el.append(sprite('vault'));
     el.addEventListener('click', () => onTile(x, y));
     tiles.push(el);
     boardEl.append(el);
   }
   for (const g of s.guards) {
-    const el = h('div', 'guard');
-    el.append(h('span', 'eye'));
+    const el = h('div', `guard${g.kind === 'watcher' ? ' watcher' : ''}`);
+    const face = h('span', 'face');
+    const hop = h('span', 'hop');
+    const bob = h('span', 'bob');
+    bob.append(sprite(g.kind === 'watcher' ? 'watcher' : 'guard', 'blink'));
+    hop.append(bob);
+    face.append(hop);
+    el.append(face, h('span', 'zzz', 'Zzz'));
     el.addEventListener('click', () => onTile(app.s!.guards.find((q) => q.id === g.id)!.x, app.s!.guards.find((q) => q.id === g.id)!.y));
     guardEls.set(g.id, el);
     boardEl.append(el);
   }
-  SQUAD.forEach((sq, i) => {
+  SQUAD.forEach((_sq, i) => {
     const el = h('div', `op c${i}`);
-    el.append(h('span', '', sq.glyph));
+    const face = h('span', 'face');
+    const hop = h('span', 'hop');
+    const bob = h('span', 'bob');
+    bob.append(sprite(CREW_ART[i] ?? 'vale', 'blink'));
+    hop.append(bob);
+    face.append(hop);
+    el.append(h('span', 'ring'), face, h('span', 'alert', '!'), h('span', 'fx'));
     el.addEventListener('click', (e) => {
       e.stopPropagation();
       select(i as OpId);
@@ -663,9 +768,9 @@ function buildPlay(): void {
 
   const panel = h('div', 'panel');
   const cards = h('div', 'op-cards');
-  SQUAD.forEach((sq, i) => {
+  SQUAD.forEach((_sq, i) => {
     const c = h('button', `op-card c${i}`);
-    c.append(h('span', 'glyph', sq.glyph), h('span', 'nm', opName(i)), h('small', '', `${i + 1}`));
+    c.append(sprite(CREW_ART[i] ?? 'vale'), h('span', 'nm', shortName(i)), h('small', '', `${i + 1}`));
     c.addEventListener('click', () => select(i as OpId));
     cards.append(c);
   });
@@ -682,10 +787,10 @@ function buildPlay(): void {
   wrap.append(hud, stage, panel);
   ui.append(wrap);
   wrap.classList.add('dive');
-  if (!settings.onboarded) {
-    saveSettings({ onboarded: true });
-    showHowTo();
-  }
+  app.lastAp = s.ap;
+  // First play: a short tutorial bubble instead of the full how-to.
+  if (!settings.onboarded && !app.tut) app.tut = 1;
+  renderTutorial();
 }
 
 function select(i: OpId): void {

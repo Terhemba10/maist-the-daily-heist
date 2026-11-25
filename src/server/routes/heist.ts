@@ -75,6 +75,7 @@ heist.get('/init', async (c) => {
     scored,
     streak,
     kicks,
+    crews: await redis.zCard(HK.board(postNight())),
     nextMs: msUntilNextDream(),
   });
 });

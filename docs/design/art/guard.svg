@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <ellipse cx="60" cy="112" rx="26" ry="5" fill="#000" opacity="0.35"/>
+  <path d="M60 14 L60 24" stroke="#2a0d1c" stroke-width="3"/><circle class="light" cx="60" cy="11" r="5" fill="#ff2e88" stroke="#2a0d1c" stroke-width="2.5"/>
+  <rect x="32" y="24" width="56" height="40" rx="14" fill="#c9d3e0" stroke="#2a0d1c" stroke-width="3"/>
+  <rect x="38" y="34" width="44" height="18" rx="9" fill="#2a0d1c"/>
+  <rect class="visor" x="42" y="38" width="36" height="10" rx="5" fill="#ff2e88"/>
+  <circle class="eye" cx="52" cy="43" r="3" fill="#fff"/><circle class="eye" cx="68" cy="43" r="3" fill="#fff"/>
+  <rect x="38" y="66" width="44" height="34" rx="10" fill="#9aa8bb" stroke="#2a0d1c" stroke-width="3"/>
+  <rect x="50" y="74" width="20" height="8" rx="3" fill="#2a0d1c"/>
+  <text x="60" y="81" font-family="Arial" font-weight="700" font-size="7" fill="#ff2e88" text-anchor="middle">SEC</text>
+  <rect x="44" y="100" width="12" height="10" rx="3" fill="#5c6878" stroke="#2a0d1c" stroke-width="2.5"/>
+  <rect x="64" y="100" width="12" height="10" rx="3" fill="#5c6878" stroke="#2a0d1c" stroke-width="2.5"/>
+  <rect x="84" y="72" width="22" height="9" rx="3" fill="#ffd166" stroke="#2a0d1c" stroke-width="2.5"/>
+  <circle cx="84" cy="76" r="6" fill="#9aa8bb" stroke="#2a0d1c" stroke-width="2.5"/>
+  <circle cx="36" cy="80" r="6" fill="#9aa8bb" stroke="#2a0d1c" stroke-width="2.5"/>
+</svg>

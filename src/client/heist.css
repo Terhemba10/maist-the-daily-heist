@@ -221,16 +221,6 @@ button {
   border-radius: 8px;
   font-size: 12px;
 }
-.crew .glyph {
-  font-size: 26px;
-  animation: bob 2.6s ease-in-out infinite;
-}
-.crew.c1 .glyph {
-  animation-delay: 0.3s;
-}
-.crew.c2 .glyph {
-  animation-delay: 0.6s;
-}
 .crew small {
   color: var(--muted);
 }
@@ -242,11 +232,6 @@ button {
 }
 .c2 {
   --c: var(--c2);
-}
-.crew .glyph,
-.op-card .glyph {
-  color: var(--c);
-  text-shadow: 0 0 10px var(--c);
 }
 @keyframes bob {
   50% {
@@ -379,32 +364,7 @@ button {
   background: rgba(6, 12, 22, 0.9);
   touch-action: none;
 }
-.tile {
-  border: 1px solid rgba(0, 240, 255, 0.09);
-  position: relative;
-  transition: background 0.2s;
-}
-.tile.wall {
-  background:
-    repeating-linear-gradient(45deg, rgba(0, 240, 255, 0.22) 0 2px, transparent 2px 7px),
-    #0d2336;
-  border-color: rgba(0, 240, 255, 0.45);
-}
-.tile.vault::after {
-  content: '◈';
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  color: var(--vault);
-  font-size: calc(var(--cell) * 0.7);
-  text-shadow: 0 0 16px var(--vault);
-  animation: pulse 1.6s infinite;
-}
-.tile.seen {
-  background: rgba(255, 46, 136, 0.22);
-  box-shadow: inset 0 0 12px rgba(255, 46, 136, 0.35);
-}
+
 .tile.wall.seen {
   background: #0d2336;
 }
@@ -428,104 +388,6 @@ button {
 }
 .tile.fog::after {
   display: none;
-}
-
-.op,
-.guard {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: var(--cell);
-  height: var(--cell);
-  display: grid;
-  place-items: center;
-  transition:
-    transform 0.16s ease-out,
-    opacity 0.3s;
-  pointer-events: auto;
-}
-.op span {
-  width: 72%;
-  height: 72%;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: calc(var(--cell) * 0.42);
-  color: #04121a;
-  background: var(--c);
-  box-shadow: 0 0 14px var(--c);
-  cursor: pointer;
-}
-.op.sel span {
-  outline: 2px solid #fff;
-  outline-offset: 3px;
-  animation: bob 1.4s ease-in-out infinite;
-}
-.op.faded {
-  opacity: 0.35;
-}
-.op.out {
-  opacity: 0;
-  pointer-events: none;
-}
-.op.hit span {
-  animation: hit 0.5s;
-}
-@keyframes hit {
-  0% {
-    transform: scale(1.4);
-    background: var(--guard);
-  }
-}
-
-.guard .eye {
-  width: 66%;
-  height: 66%;
-  background: var(--guard);
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-  box-shadow: 0 0 14px var(--guard);
-  position: relative;
-  transition: transform 0.16s;
-}
-.guard.watcher .eye {
-  clip-path: circle(50%);
-  background: radial-gradient(circle at 50% 50%, #fff 0 18%, var(--guard) 20%);
-}
-.guard .eye::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: -6px;
-  width: 0;
-  height: 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-bottom: 9px solid #fff;
-  transform: translateX(-50%);
-}
-.guard[data-facing='r'] .eye {
-  transform: rotate(90deg);
-}
-.guard[data-facing='d'] .eye {
-  transform: rotate(180deg);
-}
-.guard[data-facing='l'] .eye {
-  transform: rotate(270deg);
-}
-.guard.stunned .eye {
-  background: #5b4a66;
-  box-shadow: none;
-}
-.guard.stunned::after {
-  content: 'z z';
-  position: absolute;
-  top: -4px;
-  right: 2px;
-  font-size: 11px;
-  color: var(--c2);
-}
-.guard.hidden {
-  opacity: 0;
 }
 
 .panel {
@@ -675,18 +537,6 @@ button {
 .howto li {
   margin-bottom: 8px;
 }
-.cleared .big {
-  font-size: 56px;
-  margin: 0;
-  color: var(--vault);
-  text-shadow: 0 0 24px var(--vault);
-  animation: spin 1.2s ease-out;
-}
-@keyframes spin {
-  from {
-    transform: rotate(-180deg) scale(0.2);
-  }
-}
 .small {
   font-size: 13px;
   color: var(--muted);
@@ -796,4 +646,560 @@ button {
     animation: none !important;
     transition: none !important;
   }
+}
+
+
+/* ================================================= v2 look: art, board, animations (docs/design) */
+
+.art {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.art svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.bob {
+  display: block;
+  animation: bob 2.4s ease-in-out infinite;
+  will-change: transform;
+}
+.c1 .bob,
+.c-crew1.bob {
+  animation-delay: 0.35s;
+}
+.c2 .bob,
+.c-crew2.bob {
+  animation-delay: 0.7s;
+}
+.blink .eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: blink 4.6s infinite;
+}
+.c1 .blink .eye {
+  animation-delay: 1.3s;
+}
+.c2 .blink .eye {
+  animation-delay: 2.7s;
+}
+@keyframes blink {
+  0%,
+  94%,
+  100% {
+    transform: scaleY(1);
+  }
+  96% {
+    transform: scaleY(0.1);
+  }
+}
+
+/* top bar chips */
+.chip {
+  background: var(--bg2);
+  border: 1px solid var(--line-dim);
+  border-radius: 20px;
+  padding: 4px 10px;
+  color: var(--ink);
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff8a00;
+  box-shadow: 0 0 8px #ff8a00;
+}
+.tools.chip {
+  border-radius: 10px;
+  padding: 2px 4px;
+  align-items: center;
+}
+.tools.chip .lang,
+.tools.chip .icon {
+  border: none;
+  background: transparent;
+}
+
+/* title crew cards */
+.crew {
+  width: 104px;
+  padding: 6px 6px 10px;
+  border: 1.5px solid var(--c);
+  border-radius: 14px;
+  background: var(--bg2);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--c) 30%, transparent);
+  font-size: 14px;
+}
+.crew .bob {
+  width: 82px;
+  height: 82px;
+}
+.crew small {
+  color: var(--c);
+  font-size: 11px;
+}
+
+/* floor: checkerboard, glowing walls, pink flashlight beams */
+.tile {
+  position: relative;
+  background: #0a1626;
+  border: 1px solid rgba(0, 240, 255, 0.08);
+}
+.tile.alt {
+  background: #0d1b2d;
+}
+.tile.wall {
+  background: #1c4766;
+  border-color: rgba(0, 240, 255, 0.55);
+  border-radius: 3px;
+  box-shadow:
+    inset 0 0 8px rgba(0, 240, 255, 0.35),
+    0 0 6px rgba(0, 240, 255, 0.22);
+}
+.tile.seen {
+  background: rgba(255, 46, 136, 0.3);
+  box-shadow: inset 0 0 10px rgba(255, 46, 136, 0.35);
+}
+.tile.wall.seen {
+  background: #1c4766;
+}
+.tile.move {
+  background: rgba(0, 240, 255, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(0, 240, 255, 0.85);
+  cursor: pointer;
+}
+.tile.seen.move {
+  background: rgba(255, 46, 136, 0.36);
+  box-shadow: inset 0 0 0 1px var(--guard);
+}
+.tile .art-vault {
+  position: absolute;
+  inset: 4%;
+  pointer-events: none;
+  filter: drop-shadow(0 0 6px rgba(255, 209, 102, 0.6));
+  animation: breathe 2.2s ease-in-out infinite;
+}
+@keyframes breathe {
+  50% {
+    scale: 1.07;
+  }
+}
+.art-vault .wheel {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.art.open .wheel {
+  animation: wheel 1.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+@keyframes wheel {
+  to {
+    transform: rotate(540deg);
+  }
+}
+
+/* sprites on the board: position (.op/.guard) > facing (.face) > hop (.hop) > idle bob (.bob) */
+.op,
+.guard {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--cell);
+  height: var(--cell);
+  transition:
+    transform 0.18s ease-out,
+    opacity 0.3s;
+  cursor: pointer;
+}
+.op .face,
+.guard .face {
+  position: absolute;
+  left: -14%;
+  right: -14%;
+  bottom: 4%;
+  height: 122%;
+  display: block;
+  transition: transform 0.15s;
+  will-change: transform;
+}
+.op[data-face='l'] .face,
+.guard[data-facing='l'] .face,
+.guard.watcher[data-facing='r'] .face {
+  transform: scaleX(-1);
+}
+.guard.watcher[data-facing='l'] .face {
+  transform: none;
+}
+.hop {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.hop.go {
+  animation: hop 0.22s ease-out;
+}
+@keyframes hop {
+  45% {
+    translate: 0 -18%;
+  }
+}
+.ring {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 0;
+  height: 26%;
+  border-radius: 50%;
+  border: 2px solid var(--c);
+  background: color-mix(in srgb, var(--c) 35%, transparent);
+  box-shadow: 0 0 10px var(--c);
+  opacity: 0;
+  scale: 0.6;
+  transition:
+    opacity 0.15s,
+    scale 0.15s;
+}
+.op.sel .ring {
+  opacity: 1;
+  scale: 1;
+}
+.op.faded .face {
+  opacity: 0.4;
+}
+.op .fx {
+  position: absolute;
+  inset: -25%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--c) 0, transparent 65%);
+  opacity: 0;
+  pointer-events: none;
+}
+.op.cast .fx {
+  animation: flash 0.55s ease-out;
+}
+.op.cast .face {
+  animation: castpop 0.45s ease-out;
+}
+@keyframes flash {
+  0% {
+    opacity: 0.9;
+    scale: 0.4;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.3;
+  }
+}
+@keyframes castpop {
+  40% {
+    scale: 1.25;
+  }
+}
+.op .alert {
+  position: absolute;
+  left: 50%;
+  top: -42%;
+  translate: -50% 0;
+  font-weight: 900;
+  font-size: calc(var(--cell) * 0.55);
+  color: var(--guard);
+  text-shadow: 0 0 10px var(--guard);
+  opacity: 0;
+  pointer-events: none;
+}
+.op.spotted .alert {
+  animation: alert 0.9s ease-out forwards;
+}
+.op.spotted .face {
+  transform-origin: 50% 92%;
+  animation: fall 0.5s 0.3s ease-in forwards;
+}
+@keyframes alert {
+  0% {
+    opacity: 0;
+    scale: 0.3;
+  }
+  25% {
+    opacity: 1;
+    scale: 1.2;
+  }
+  70% {
+    opacity: 1;
+    scale: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes fall {
+  to {
+    rotate: 85deg;
+    translate: 8% 10%;
+  }
+}
+.op.out {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s 0.85s;
+}
+.guard .zzz {
+  position: absolute;
+  top: -22%;
+  right: -4%;
+  font-weight: 800;
+  font-size: calc(var(--cell) * 0.3);
+  color: var(--c2);
+  opacity: 0;
+  pointer-events: none;
+}
+.guard.stunned .zzz {
+  animation: zzz 1.6s ease-in-out infinite;
+}
+.guard.stunned .bob {
+  animation-duration: 4s;
+  opacity: 0.8;
+}
+@keyframes zzz {
+  0% {
+    opacity: 0;
+    translate: 0 4px;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    translate: 6px -12px;
+  }
+}
+.guard.hidden {
+  opacity: 0;
+}
+
+/* AP float next to the AP number */
+.ap {
+  position: relative;
+}
+.ap-float {
+  position: absolute;
+  right: 100%;
+  top: 8px;
+  margin-right: 10px;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--line);
+  pointer-events: none;
+  animation: apf 0.9s ease-out forwards;
+}
+.ap-float.up {
+  color: var(--c2);
+}
+@keyframes apf {
+  to {
+    opacity: 0;
+    translate: 0 -16px;
+  }
+}
+
+/* squad buttons with art */
+.op-card {
+  border-color: color-mix(in srgb, var(--c) 40%, transparent);
+  border-radius: 12px;
+  padding: 2px 8px 2px 2px;
+  font-weight: 700;
+  font-size: 13px;
+}
+.op-card .art {
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+.op-card.sel {
+  border-width: 2px;
+  border-color: var(--c);
+  box-shadow: 0 0 12px var(--c);
+}
+
+/* first-play tutorial bubble */
+.tip {
+  align-self: center;
+  max-width: 100%;
+  border: none;
+  background: var(--vault);
+  color: #1a1200;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  padding: 10px 14px;
+  border-radius: 12px;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  animation: tipin 0.3s ease-out;
+}
+.tip b {
+  font-weight: 800;
+}
+@keyframes tipin {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+
+/* cleared modal: the vault wheel spins open */
+.cleared .art.big {
+  width: 104px;
+  height: 104px;
+  margin: 0 auto 4px;
+  filter: drop-shadow(0 0 14px rgba(255, 209, 102, 0.6));
+}
+
+/* results celebration */
+.celebrate {
+  position: relative;
+  width: min(330px, 90vw);
+  height: 160px;
+  margin: 2px auto 0;
+}
+.celebrate .c-vault {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 96px;
+  height: 96px;
+  translate: -50% 0;
+  filter: drop-shadow(0 0 14px rgba(255, 209, 102, 0.55));
+}
+.c-crew {
+  position: absolute;
+  width: 34%;
+  aspect-ratio: 1;
+}
+.c-crew0 {
+  left: 2%;
+  top: 22%;
+}
+.c-crew1 {
+  right: 2%;
+  top: 28%;
+}
+.c-crew2 {
+  left: 33%;
+  top: 38%;
+}
+.spark {
+  position: absolute;
+  font-size: 16px;
+  animation: twinkle 1.8s ease-in-out infinite;
+}
+.spark.s0 {
+  left: 12%;
+  top: 4%;
+}
+.spark.s1 {
+  right: 10%;
+  top: 10%;
+  animation-delay: 0.4s;
+}
+.spark.s2 {
+  left: 28%;
+  top: 14%;
+  animation-delay: 0.8s;
+}
+.spark.s3 {
+  right: 24%;
+  top: 0;
+  animation-delay: 1.2s;
+}
+.spark.s4 {
+  left: 4%;
+  top: 50%;
+  animation-delay: 0.6s;
+}
+@keyframes twinkle {
+  50% {
+    opacity: 0.25;
+    scale: 0.6;
+  }
+}
+.res-row {
+  align-items: center;
+  background: var(--bg2);
+  border-color: rgba(0, 240, 255, 0.2);
+  border-radius: 10px;
+  text-align: left;
+  font-weight: 700;
+}
+.res-name small {
+  display: block;
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.res-row b {
+  color: var(--vault);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring,
+  .op,
+  .guard {
+    transition: none !important;
+  }
+  .op.out {
+    transition: none !important;
+  }
+}
+
+/* Fog must hide everything on unseen tiles, so it wins over walls, checkerboard, beams and moves. */
+.tile.fog,
+.tile.fog.alt,
+.tile.fog.wall,
+.tile.fog.seen,
+.tile.fog.move {
+  background: #04070d;
+  border-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Title crew cards stay on one row on small phones (as in the mockup). */
+.squad-row {
+  flex-wrap: nowrap;
+}
+.crew {
+  width: min(104px, calc((100vw - 52px) / 3));
+}
+.crew .bob {
+  width: min(82px, 100%);
+  height: auto;
+  aspect-ratio: 1;
+}
+@media (max-height: 700px) {
+  .hero {
+    margin-top: 1vh;
+  }
+  .logo {
+    font-size: clamp(30px, 8vw, 56px);
+  }
+  .crew .bob {
+    width: min(64px, 100%);
+  }
+}
+
+/* Performance on cheap phones: on the board only the selected crew member idles; robots don't blink. */
+.board .bob {
+  animation: none;
+  will-change: auto;
+}
+.board .op.sel .bob {
+  animation: bob 2.4s ease-in-out infinite;
+  will-change: transform;
+}
+.board .guard .blink .eye {
+  animation: none;
 }

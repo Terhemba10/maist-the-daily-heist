@@ -69,6 +69,12 @@ const en = {
   h4: 'Each crew member has an ability: Vale folds walls open, Wren fades from sight, Oto puts guards to sleep. Wait lets the guards move without you.',
   h5: 'Out of AP or crew? You go adrift. On tonight’s post you can ask the comment thread for a Pull: anyone who replies WAKE UP gives you +6 AP.',
   h6: 'Score: 200 per vault, +100 for every AP left, +50 per layer with no Pull. Everyone gets one scored run a day. Same maps for everyone.',
+  tutStep: 'Step {i} of {n}',
+  tut1: 'Tap a glowing tile to move. Each step costs 1 AP.',
+  tut2: 'Stay out of the red flashlight beams!',
+  tut3: 'Switch crew below: each one has an ability.',
+  tut4: 'Get anyone onto the vault to crack the layer!',
+  par: 'Par {par} AP · you used {used}',
 } as const;
 
 export type Key = keyof typeof en;
@@ -143,6 +149,12 @@ const zh: Dict = {
   h4: '每名队员都有技能：维尔能折开墙壁，雷恩能隐身，奥托能让守卫沉睡。“等待”让守卫单独行动。',
   h5: '行动点或队员耗尽，你就会在梦里漂流。在今晚的帖子里，你可以请评论区拉你一把：任何人回复 WAKE UP 都能给你 +6 行动点。',
   h6: '计分：每个金库 200 分，每剩 1 行动点 +100 分，无需别人拉一把的层 +50 分。每人每天一次计分机会，所有人地图相同。',
+  tutStep: '第 {i}/{n} 步',
+  tut1: '点击发光的格子移动。每走一步消耗 1 行动点。',
+  tut2: '别走进红色的手电光束！',
+  tut3: '在下方切换队员：每人都有一个技能。',
+  tut4: '让任意一名队员到达金库，就能破解这一层！',
+  par: '标准 {par} 行动点 · 你用了 {used}',
 };
 
 const ja: Dict = {
@@ -214,6 +226,12 @@ const ja: Dict = {
   h4: '各メンバーには能力があります：ヴェイルは壁を開き、レンは姿を消し、オトは警備員を眠らせます。「待機」は警備員だけを動かします。',
   h5: 'APかメンバーが尽きると夢の中を漂流します。今夜の投稿ならコメント欄に引き上げを頼めます：誰かが WAKE UP と返信すると +6 AP。',
   h6: 'スコア：金庫1つ200点、残りAP1につき+100点、引き上げなしの層は+50点。スコア記録は1日1回。マップは全員共通です。',
+  tutStep: 'ステップ {i}/{n}',
+  tut1: '光るマスをタップして移動。1歩ごとに1 AP。',
+  tut2: '赤いライトの光に入らないで！',
+  tut3: '下でメンバーを切り替え：それぞれ特技があります。',
+  tut4: '誰か一人を金庫に乗せれば、この層は突破！',
+  par: 'パー {par} AP · 使用 {used}',
 };
 
 const de: Dict = {
@@ -285,6 +303,12 @@ const de: Dict = {
   h4: 'Jedes Mitglied hat eine Fähigkeit: Vale faltet Wände auf, Wren verblasst, Oto schläfert Wachen ein. Warten lässt nur die Wachen ziehen.',
   h5: 'Keine AP oder keine Crew mehr? Dann treibst du im Traum ab. Im heutigen Post kannst du den Thread um einen Ruck bitten: Wer WAKE UP antwortet, gibt dir +6 AP.',
   h6: 'Punkte: 200 pro Tresor, +100 pro übriger AP, +50 pro Ebene ohne Ruck. Eine gewertete Runde pro Tag. Gleiche Karten für alle.',
+  tutStep: 'Schritt {i} von {n}',
+  tut1: 'Tippe auf ein leuchtendes Feld, um zu gehen. Jeder Schritt kostet 1 AP.',
+  tut2: 'Bleib aus den roten Taschenlampenstrahlen!',
+  tut3: 'Wechsle unten die Crew: Jede hat eine Fähigkeit.',
+  tut4: 'Bring irgendwen auf den Tresor, um die Ebene zu knacken!',
+  par: 'Par {par} AP · verbraucht {used}',
 };
 
 const hi: Dict = {
@@ -356,6 +380,12 @@ const hi: Dict = {
   h4: 'हर सदस्य की एक ख़ास क्षमता है: वेल दीवार खोलता है, रेन ग़ायब हो जाता है, ओटो गार्ड को सुला देता है। "रुकें" से सिर्फ़ गार्ड चलते हैं।',
   h5: 'AP या टीम ख़त्म? आप सपने में भटक जाते हैं। आज रात की पोस्ट पर कमेंट थ्रेड से खिंचाव माँगें: जो भी WAKE UP लिखे, आपको +6 AP मिलेंगे।',
   h6: 'स्कोर: हर तिजोरी 200, हर बचे AP पर +100, बिना खिंचाव वाली परत पर +50। रोज़ एक स्कोर्ड रन। सबके लिए एक जैसे नक्शे।',
+  tutStep: 'चरण {i}/{n}',
+  tut1: 'चलने के लिए चमकती टाइल पर टैप करें। हर कदम 1 AP का है।',
+  tut2: 'लाल टॉर्च की रोशनी से दूर रहें!',
+  tut3: 'नीचे टीम बदलें: हर सदस्य के पास एक क्षमता है।',
+  tut4: 'किसी को भी तिजोरी तक पहुँचाएँ और परत तोड़ें!',
+  par: 'पार {par} AP · आपने {used} लिए',
 };
 
 export const LANGS = { en: 'English', zh: '中文', ja: '日本語', de: 'Deutsch', hi: 'हिन्दी' } as const;
