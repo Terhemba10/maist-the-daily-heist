@@ -129,3 +129,83 @@ void test('nights past 30 keep coming: fresh, solvable, deterministic maps', () 
   }
   assert.notDeepEqual(buildHeist(31).layers[0]?.grid, buildHeist(30).layers[0]?.grid);
 });
+
+// ------------------------------------------------------------------ the vault slipped
+
+const slipDef = (): LayerDef => ({ ...tiny(), vault2: [8, 0] });
+const up = (n: number): Action[] => Array.from({ length: n }, (): Action => ({ t: 'm', o: 2, d: 'u' }));
+const right = (n: number): Action[] => Array.from({ length: n }, (): Action => ({ t: 'm', o: 2, d: 'r' }));
+// op 2 starts at (0,8): 8 up to (0,0), 3 right onto the first vault at (3,0)
+const toVault = (): Action[] => [...up(8), ...right(3)];
+
+void test('the vault slips on first touch, guards still move, and vault2 clears', () => {
+  const def = slipDef();
+  def.guards = [{ id: 0, kind: 'patrol', route: [[9, 5], [9, 6], [9, 7]], facing: 'd' }];
+  let s = newLayerState(def);
+  for (const a of toVault()) s = apply(s, a);
+  assert.equal(s.status, 'play');
+  assert.equal(s.justSlipped, true);
+  assert.equal(s.slipAt, 11);
+  assert.deepEqual(s.vault, [8, 0]);
+  assert.equal(s.grid[3], 0);
+  assert.equal(s.grid[8], 2);
+  assert.equal(s.t, 11, 'the guards took their turn on the slip move');
+  s = apply(s, { t: 'm', o: 2, d: 'l' });
+  assert.equal(s.justSlipped, false);
+  // Stepping back onto the old tile does nothing now.
+  s = apply(s, { t: 'm', o: 2, d: 'r' });
+  assert.equal(s.status, 'play');
+});
+
+void test('replay of a slip run clears and pays the quick bonus within 5 moves', () => {
+  const def = slipDef();
+  const heist = { night: 0, layers: [def, def, def] };
+  const r = replay(heist, { v: 1, layers: [[...toVault(), ...right(5)]] });
+  assert.ok(r.ok);
+  if (r.ok) {
+    assert.equal(r.results[0]?.cleared, true);
+    assert.equal(r.results[0]?.slip, true);
+    assert.equal(r.results[0]?.quick, true);
+    assert.equal(r.results[0]?.ap, 20 - 16);
+    assert.equal(totalScore(r.results), 200 + 400 + 50 + 100);
+  }
+  // Two waits on the way: 7 actions after the slip, so no bonus.
+  const slow = replay(heist, { v: 1, layers: [[...toVault(), { t: 'w' }, { t: 'w' }, ...right(5)]] });
+  assert.ok(slow.ok);
+  if (slow.ok) {
+    assert.equal(slow.results[0]?.cleared, true);
+    assert.equal(slow.results[0]?.quick, false);
+    assert.equal(totalScore(slow.results), 200 + 200 + 50);
+  }
+});
+
+void test('reaching vault2 before the slip does nothing: it is just floor', () => {
+  let s = newLayerState(slipDef());
+  // up to (0,1), along row 1 to (8,1), then up onto (8,0)
+  for (const a of [...up(7), ...right(8), { t: 'm', o: 2, d: 'u' } as Action]) s = apply(s, a);
+  assert.equal(s.status, 'play');
+  assert.equal(s.slipAt, 0);
+  assert.equal(s.grid[8], 0);
+  assert.deepEqual(s.vault, [3, 0]);
+});
+
+void test('generator: easy never slips, difficult always, hard on some nights; par covers the full route', () => {
+  let hard = 0;
+  for (let n = 1; n <= 40; n++) {
+    const [easy, hd, diff] = buildHeist(n).layers;
+    assert.equal(easy?.vault2, undefined);
+    assert.ok(diff?.vault2, `night ${n} difficult should slip`);
+    if (hd?.vault2) hard++;
+    for (const l of [hd, diff]) {
+      if (!l?.vault2) continue;
+      const d = Math.abs(l.vault2[0] - l.vault[0]) + Math.abs(l.vault2[1] - l.vault[1]);
+      assert.ok(d >= 5, `night ${n} ${l.tier}: vault2 only ${d} tiles away`);
+      assert.equal(l.grid[l.vault2[1] * 10 + l.vault2[0]], 0, 'vault2 is floor until the slip');
+      assert.equal(solveCost(l), l.par, 'par is the full route');
+      const { vault2: _v2, ...plain } = l;
+      const direct = solveCost(plain);
+      assert.ok(direct !== null && direct <= l.par - 5, 'the slip adds to the route');
+    }
+  }
+  assert.ok(hard >= 10 && hard <= 30, `hard slipped on ${hard}/40 nights`);
+});

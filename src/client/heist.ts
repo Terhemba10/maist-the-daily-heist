@@ -1,7 +1,7 @@
 import { CREW_ART, sprite } from './art/index.ts';
 import { audio } from './core/audio.ts';
 import { activeTheme, prefs, savePrefs, type ThemePref } from './prefs.ts';
-import { saveSettings, settings } from './core/settings.ts';
+import { reducedMotion, saveSettings, settings } from './core/settings.ts';
 import { getLang, LANGS, setLang, t, type Key, type Lang } from './i18n/heist.ts';
 import type { BoardRes, GhostRes, HeistInit, KickRes, LimboRes, RunRes, ShareRes } from '../shared/heist/api.ts';
 import {
@@ -13,6 +13,8 @@ import {
   idx,
   KICK_AP,
   layerScore,
+  resultOf,
+  SLIP_BONUS,
   newLayerState,
   SIZE,
   SQUAD,
@@ -23,6 +25,7 @@ import {
   type LayerState,
   type Tier,
   type OpId,
+  type Pos,
 } from '../shared/heist/engine.ts';
 import { msUntilNextDream, nightNumber } from '../shared/logic/season.ts';
 
@@ -424,6 +427,7 @@ function act(a: Action): void {
   }
   const n = apply(s, a);
   app.s = n;
+  clearSlipPing();
   app.record[app.li]!.push(a);
   saveProgress();
   app.targeting = false;
@@ -443,8 +447,38 @@ function act(a: Action): void {
   if (n.ops[app.sel]?.out) app.sel = firstActive();
   if (n.ap > 0 && n.ap <= 3 && n.status === 'play') audio.heartbeat();
   renderPlay(false);
+  if (n.justSlipped) vaultSlipped(s.vault, n.vault);
   if (n.status === 'cleared') window.setTimeout(showCleared, 350);
   else if (n.status === 'limbo') window.setTimeout(showLimbo, 450);
+}
+
+/** "The vault slipped!": poof on the old tile, the vault reappears, and a gold ping marks it for one turn. */
+function vaultSlipped(from: Pos, to: Pos): void {
+  const old = tiles[idx(from[0], from[1])]?.querySelector<HTMLElement>('.art-vault');
+  if (old) {
+    old.classList.add('poof');
+    window.setTimeout(() => old.remove(), reducedMotion() ? 0 : 700);
+  }
+  tiles[idx(to[0], to[1])]?.append(vaultArt());
+  if (boardEl) {
+    const ping = h('span', 'slip-ping');
+    ping.style.transform = `translate(calc(var(--cell) * ${to[0]}), calc(var(--cell) * ${to[1]}))`;
+    boardEl.append(ping);
+  }
+  audio.tide();
+  buzz(40);
+  toast(t('slipped'));
+}
+
+/** The ping lasts one turn: the next action removes it (and in fog the vault is hidden again). */
+function clearSlipPing(): void {
+  document.querySelectorAll('.slip-ping').forEach((p) => p.remove());
+}
+
+function vaultArt(): HTMLElement {
+  const v = sprite('vault');
+  v.append(h('span', 'glint'));
+  return v;
 }
 
 function buzz(ms: number): void {
@@ -459,10 +493,11 @@ function showCleared(): void {
   const s = app.s;
   if (!s) return;
   audio.drop();
-  const pts = layerScore({ tier: s.def.tier, cleared: true, ap: s.ap, kicks: s.kicks, moves: 0 });
+  const pts = layerScore(resultOf(s, 0));
   const body = h('div', 'cleared');
   const vault = sprite('vault', 'big open');
   body.append(vault, h('p', '', t('clearedSub', { pts, ap: s.ap })));
+  if (s.quick) body.append(h('p', 'slip-bonus', t('slipBonus', { pts: SLIP_BONUS })));
   document.querySelector('.tile.vault .art')?.classList.add('open');
   const last = app.li >= 2;
   const next = h('button', 'btn primary', last ? t('finish') : t('nextLayer', { i: app.li + 2 }));
@@ -590,6 +625,7 @@ async function finish(): Promise<void> {
     const def = app.heist?.layers[i];
     const name = h('span', 'res-name', `${t('layer', { i: i + 1 })} · ${tierName(i)}`);
     if (def) name.append(h('small', '', t('par', { par: def.par, used: r.cleared ? def.ap + r.kicks * KICK_AP - r.ap : '—' })));
+    if (r.quick) name.append(h('small', 'slip-bonus', t('slipBonus', { pts: SLIP_BONUS })));
     row.append(name, h('b', '', r.cleared ? `◈ ${layerScore(r)}` : '—'));
     layers.append(row);
   });
@@ -622,7 +658,7 @@ function localResults() {
     const def = app.heist!.layers[i]!;
     let s = newLayerState(def);
     for (const a of app.record[i]!) if (canApply(s, a).ok) s = apply(s, a);
-    out.push({ tier: def.tier, cleared: s.status === 'cleared', ap: s.ap, kicks: s.kicks, moves: 0 });
+    out.push(resultOf(s, 0));
   }
   return out;
 }
@@ -819,7 +855,8 @@ function visibleSet(s: LayerState): Set<number> | null {
         if (x >= 0 && y >= 0 && x < SIZE && y < SIZE) v.add(idx(x, y));
       }
   }
-  v.add(idx(s.def.vault[0], s.def.vault[1]));
+  // The vault shows through the fog until it slips; after that only on the ping turn, then you search.
+  if (s.slipAt === 0 || s.justSlipped) v.add(idx(s.vault[0], s.vault[1]));
   return v;
 }
 
@@ -936,7 +973,16 @@ function buildPlay(): void {
   setLayerBg(s.def.tier);
   const hud = h('div', 'hud');
   const left = h('div', 'hud-left');
-  left.append(h('span', 'kicker', `${t('night', { n: app.night })} · ${app.scored ? t('scoredTag') : t('practiceTag')}`), h('b', 'layer-name', `${t('layer', { i: app.li + 1 })} · ${tierName(app.li)}`));
+  const layerName = h('b', 'layer-name', `${t('layer', { i: app.li + 1 })} · ${tierName(app.li)}`);
+  if (s.def.vault2) {
+    // Warn up front: this layer's vault will slip.
+    const icon = h('span', 'slip-icon', '⇄');
+    icon.title = t('slipWarn');
+    icon.setAttribute('role', 'img');
+    icon.setAttribute('aria-label', t('slipWarn'));
+    layerName.append(icon);
+  }
+  left.append(h('span', 'kicker', `${t('night', { n: app.night })} · ${app.scored ? t('scoredTag') : t('practiceTag')}`), layerName);
   const apBox = h('div', 'ap');
   const num = h('span', 'ap-num', String(s.ap));
   const meter = h('div', 'ap-meter');
@@ -953,11 +999,7 @@ function buildPlay(): void {
     const el = h('div', 'tile');
     const x = i % SIZE;
     const y = Math.floor(i / SIZE);
-    if (x === s.def.vault[0] && y === s.def.vault[1]) {
-      const v = sprite('vault');
-      v.append(h('span', 'glint'));
-      el.append(v);
-    }
+    if (x === s.vault[0] && y === s.vault[1]) el.append(vaultArt());
     el.addEventListener('click', () => onTile(x, y));
     tiles.push(el);
     boardEl.append(el);

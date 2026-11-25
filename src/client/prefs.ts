@@ -6,9 +6,11 @@ export type ThemePref = 'system' | 'light' | 'dark';
 export type Prefs = { theme: ThemePref; ghost: boolean; bigText: boolean };
 
 const KEY = 'heist.prefs';
+/** The game is white (light) unless the player picks Dark or System in Settings. */
+const DEFAULT_THEME: ThemePref = 'light';
 
 function read(): Prefs {
-  const base: Prefs = { theme: 'system', ghost: true, bigText: false };
+  const base: Prefs = { theme: DEFAULT_THEME, ghost: true, bigText: false };
   try {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return base;
@@ -16,7 +18,7 @@ function read(): Prefs {
     if (typeof v !== 'object' || v === null) return base;
     const theme = 'theme' in v ? v.theme : undefined;
     return {
-      theme: theme === 'light' || theme === 'dark' ? theme : 'system',
+      theme: theme === 'light' || theme === 'dark' || theme === 'system' ? theme : DEFAULT_THEME,
       ghost: 'ghost' in v && typeof v.ghost === 'boolean' ? v.ghost : base.ghost,
       bigText: 'bigText' in v && typeof v.bigText === 'boolean' ? v.bigText : base.bigText,
     };

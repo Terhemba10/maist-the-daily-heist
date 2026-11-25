@@ -32,12 +32,21 @@ export type LayerDef = {
   grid: Tile[];
   start: Pos[];
   vault: Pos;
+  /**
+   * "The vault slipped!": when set, the first time anyone steps on `vault` the layer does not clear;
+   * the vault moves here instead and play goes on. Until then this tile is plain floor.
+   */
+  vault2?: Pos;
   guards: GuardDef[];
   ap: number;
   par: number;
   range: number;
   fog: boolean;
 };
+
+/** Reaching the slipped vault within this many actions of the slip earns SLIP_BONUS. */
+export const SLIP_QUICK = 5;
+export const SLIP_BONUS = 100;
 
 export type HeistDef = { night: number; layers: LayerDef[] };
 
@@ -80,6 +89,14 @@ export type LayerState = {
   status: LayerStatus;
   /** Ops caught by the last guard phase (for effects). */
   lastCaught: number[];
+  /** Where the vault is now (moves to def.vault2 when it slips). */
+  vault: Pos;
+  /** Action number (1-based, kicks not counted) on which the vault slipped, or 0 if it has not. */
+  slipAt: number;
+  /** True only right after the action that made the vault slip (for effects). */
+  justSlipped: boolean;
+  /** Cleared by reaching the slipped vault within SLIP_QUICK actions of the slip. */
+  quick: boolean;
 };
 
 export const idx = (x: number, y: number) => y * SIZE + x;
@@ -100,6 +117,10 @@ export function newLayerState(def: LayerDef): LayerState {
     kicks: 0,
     status: 'play',
     lastCaught: [],
+    vault: def.vault,
+    slipAt: 0,
+    justSlipped: false,
+    quick: false,
   };
 }
 
@@ -232,6 +253,7 @@ export function apply(prev: LayerState, a: Action): LayerState {
   if (!c.ok) throw new Error(c.reason);
   const s = cloneState(prev);
   s.lastCaught = [];
+  s.justSlipped = false;
 
   if (a.t === 'kick') {
     s.kicks += 1;
@@ -254,9 +276,20 @@ export function apply(prev: LayerState, a: Action): LayerState {
     o.x += dx;
     o.y += dy;
     s.ap -= 1;
-    if (o.x === s.def.vault[0] && o.y === s.def.vault[1]) {
-      s.status = 'cleared';
-      return s;
+    if (o.x === s.vault[0] && o.y === s.vault[1]) {
+      const v2 = s.def.vault2;
+      if (v2 && s.slipAt === 0) {
+        // The vault slipped: it vanishes here and reappears at vault2. The guards still take their turn.
+        s.grid[idx(s.vault[0], s.vault[1])] = 0;
+        s.grid[idx(v2[0], v2[1])] = 2;
+        s.vault = v2;
+        s.slipAt = s.t + 1;
+        s.justSlipped = true;
+      } else {
+        if (s.slipAt > 0 && s.t + 1 - s.slipAt <= SLIP_QUICK) s.quick = true;
+        s.status = 'cleared';
+        return s;
+      }
     }
   } else {
     const spec = SQUAD[a.o];
@@ -280,11 +313,26 @@ export function apply(prev: LayerState, a: Action): LayerState {
 
 // ------------------------------------------------------------------ scoring & replay
 
-export type LayerResult = { tier: Tier; cleared: boolean; ap: number; kicks: number; moves: number };
+export type LayerResult = {
+  tier: Tier;
+  cleared: boolean;
+  ap: number;
+  kicks: number;
+  moves: number;
+  /** The vault slipped on this layer. */
+  slip?: boolean;
+  /** The slipped vault was reached within SLIP_QUICK actions (+SLIP_BONUS). */
+  quick?: boolean;
+};
 
 export function layerScore(r: LayerResult): number {
   if (!r.cleared) return 0;
-  return 200 + r.ap * 100 + (r.kicks === 0 ? 50 : 0);
+  return 200 + r.ap * 100 + (r.kicks === 0 ? 50 : 0) + (r.quick ? SLIP_BONUS : 0);
+}
+
+export function resultOf(s: LayerState, moves: number): LayerResult {
+  const cleared = s.status === 'cleared';
+  return { tier: s.def.tier, cleared, ap: s.ap, kicks: s.kicks, moves, slip: s.slipAt > 0, quick: cleared && s.quick };
 }
 
 export function totalScore(rs: LayerResult[]): number {
@@ -313,7 +361,7 @@ export function replay(heist: HeistDef, rec: RunRecord): ReplayResult {
       if (a.t !== 'kick') moves += 1;
     }
     kicks += s.kicks;
-    results.push({ tier: def.tier, cleared: s.status === 'cleared', ap: s.ap, kicks: s.kicks, moves });
+    results.push(resultOf(s, moves));
     final = s;
     if (s.status !== 'cleared' && i < rec.layers.length - 1) return { ok: false, reason: 'layer not cleared' };
   }
@@ -380,7 +428,8 @@ export function solveCost(def: LayerDef, maxAp = 60): number | null {
           if (n.status === 'cleared') return t + 1;
           if (n.lastCaught.length || n.status !== 'play') continue;
           const op = n.ops[o]!;
-          const key = idx(op.x, op.y);
+          // Before and after a slip are different searches over the same tiles.
+          const key = idx(op.x, op.y) + (n.slipAt > 0 ? SIZE * SIZE : 0);
           if (!next.has(key)) next.set(key, n);
         }
       }
@@ -409,9 +458,19 @@ function reachable(grid: Tile[], from: Pos, to: Pos): boolean {
   return false;
 }
 
+/** Easy never slips, Difficult always does, Hard on about half of nights (seeded, same for everyone). */
+export function layerSlips(seed: number, tier: Tier): boolean {
+  if (tier === 'easy') return false;
+  if (tier === 'difficult') return true;
+  return rng(seed ^ 0x51ab)() < 0.5;
+}
+
 function buildLayer(seed: number, tier: Tier): LayerDef {
   const spec = TIER_SPEC[tier];
   const r = rng(seed);
+  const slips = layerSlips(seed, tier);
+  // The full route (start -> vault -> vault2) is longer, so it gets a longer window.
+  const [minCost, maxCost] = slips ? [16, 34] : [12, 26];
   const pick = <T>(xs: readonly T[]): T => xs[Math.floor(r() * xs.length)] as T;
   for (let attempt = 0; attempt < 400; attempt++) {
     const grid: Tile[] = new Array<Tile>(SIZE * SIZE).fill(0);
@@ -438,9 +497,24 @@ function buildLayer(seed: number, tier: Tier): LayerDef {
     grid[idx(vault[0], vault[1])] = 2;
     if (!reachable(grid, START[0]!, vault)) continue;
 
+    const farFromStart = (x: number, y: number) => START.every(([sx, sy]) => manhattan(x, y, sx, sy) >= 5);
+    let vault2: Pos | undefined;
+    if (slips) {
+      for (let k = 0; k < 80 && !vault2; k++) {
+        const x = Math.floor(r() * SIZE);
+        const y = Math.floor(r() * SIZE);
+        if (grid[idx(x, y)] !== 0 || manhattan(x, y, vault[0], vault[1]) < 5 || !farFromStart(x, y)) continue;
+        if (!reachable(grid, vault, [x, y])) continue;
+        vault2 = [x, y];
+      }
+      if (!vault2) continue;
+    }
+
     const guards: GuardDef[] = [];
     const taken = new Set<number>([idx(vault[0], vault[1])]);
-    const farFromStart = (x: number, y: number) => START.every(([sx, sy]) => manhattan(x, y, sx, sy) >= 5);
+    if (vault2) taken.add(idx(vault2[0], vault2[1]));
+    const nearVault = (x: number, y: number) =>
+      manhattan(x, y, vault[0], vault[1]) < 2 || (!!vault2 && manhattan(x, y, vault2[0], vault2[1]) < 2);
     const floor = (x: number, y: number) => inside(x, y) && grid[idx(x, y)] === 0 && !taken.has(idx(x, y));
     let id = 0;
     const kinds: GuardKind[] = [
@@ -454,7 +528,7 @@ function buildLayer(seed: number, tier: Tier): LayerDef {
       for (let k = 0; k < 60 && !placed; k++) {
         const x = Math.floor(r() * SIZE);
         const y = Math.floor(r() * SIZE);
-        if (!floor(x, y) || !farFromStart(x, y) || manhattan(x, y, vault[0], vault[1]) < 2) continue;
+        if (!floor(x, y) || !farFromStart(x, y) || nearVault(x, y)) continue;
         const facing = pick(CLOCKWISE);
         const route: Pos[] = [[x, y]];
         if (kind === 'patrol') {
@@ -477,9 +551,17 @@ function buildLayer(seed: number, tier: Tier): LayerDef {
     if (failed) continue;
 
     const draft: LayerDef = { tier, grid, start: START, vault, guards, ap: 99, par: 0, range: spec.range, fog: spec.fog };
+    if (vault2) {
+      draft.vault2 = vault2;
+      // The new vault must not sit in a guard's sight at the start.
+      const s0 = newLayerState(draft);
+      const seen = s0.guards.some((g) => guardVision(s0, g, spec.range).some(([x, y]) => x === vault2[0] && y === vault2[1]));
+      if (seen) continue;
+    }
+    // Solved over the full route (start -> vault -> vault2 when it slips).
     const cost = solveCost(draft);
     // Too short is boring, too long is a slog.
-    if (cost === null || cost < 12 || cost > 26) continue;
+    if (cost === null || cost < minCost || cost > maxCost) continue;
     return { ...draft, ap: cost + spec.slack, par: cost };
   }
   throw new Error(`could not build a ${tier} layer for seed ${seed}`);
