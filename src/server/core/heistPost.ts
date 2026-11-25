@@ -1,5 +1,5 @@
 import { context, reddit, redis } from '@devvit/web/server';
-import { currentNight } from '../../shared/logic/season';
+import { nightNumber } from '../../shared/logic/season';
 import { HK, HTTL } from './heistKeys';
 
 /**
@@ -10,7 +10,7 @@ import { HK, HTTL } from './heistKeys';
 export async function createHeistPost(opts: { night?: number; force?: boolean } = {}) {
   const subredditName = context.subredditName;
   if (!subredditName) throw new Error('subredditName missing');
-  const night = opts.night ?? currentNight();
+  const night = opts.night ?? nightNumber();
   const existing = await redis.hGet(HK.night(night), 'postId');
   if (existing && !opts.force) return { id: existing, created: false };
 

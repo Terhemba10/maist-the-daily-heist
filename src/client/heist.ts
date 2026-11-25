@@ -24,7 +24,7 @@ import {
   type Tier,
   type OpId,
 } from '../shared/heist/engine.ts';
-import { currentNight, msUntilNextDream } from '../shared/logic/season.ts';
+import { msUntilNextDream, nightNumber } from '../shared/logic/season.ts';
 
 // ------------------------------------------------------------------ server
 
@@ -45,7 +45,7 @@ type Mode = 'title' | 'play' | 'over';
 
 const app = {
   init: null as HeistInit | null,
-  night: currentNight(),
+  night: nightNumber(),
   heist: null as HeistDef | null,
   mode: 'title' as Mode,
   scored: false,
@@ -299,7 +299,7 @@ function seasonStrip(): HTMLElement {
     row.append(tile);
   }
   const hours = Math.max(1, Math.ceil((app.nextAt - Date.now()) / 3_600_000));
-  for (let k = 1; k <= 3 && today + k <= 30; k++) {
+  for (let k = 1; k <= 3; k++) {
     const tile = h('div', 'night-tile locked');
     tile.append(h('b', '', `🔒 ${t('night', { n: today + k })}`), h('span', '', t('unlocksIn', { h: hours + 24 * (k - 1) })));
     row.append(tile);

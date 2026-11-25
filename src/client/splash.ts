@@ -2,7 +2,7 @@ import { context, requestExpandedMode } from '@devvit/web/client';
 import type { HeistInit } from '../shared/heist/api.ts';
 import { ART, isArtName } from './art/index.ts';
 import './prefs.ts'; // applies the saved or system light/dark theme
-import { currentNight, msUntilNextDream } from '../shared/logic/season.ts';
+import { msUntilNextDream, nightNumber } from '../shared/logic/season.ts';
 
 const $ = (id: string) => document.getElementById(id);
 const go = $('go');
@@ -26,9 +26,9 @@ go?.addEventListener('click', (e) => {
 function postNight(): number {
   try {
     const n = Number(context?.postData?.night ?? 0);
-    return n >= 1 ? n : currentNight();
+    return n >= 1 ? n : nightNumber();
   } catch {
-    return currentNight();
+    return nightNumber();
   }
 }
 

@@ -115,3 +115,17 @@ void test('limbo then kick restores AP and operatives', () => {
   assert.equal(s.ap, 6);
   assert.equal(s.kicks, 1);
 });
+
+void test('nights past 30 keep coming: fresh, solvable, deterministic maps', () => {
+  for (const n of [31, 32, 100, 365, 1000]) {
+    const h = buildHeist(n);
+    assert.equal(h.night, n);
+    assert.equal(h.layers.length, 3);
+    for (const l of h.layers) {
+      const cost = solveCost(l, l.ap);
+      assert.ok(cost !== null && cost <= l.ap, `night ${n} ${l.tier} unsolvable`);
+    }
+    assert.deepEqual(buildHeist(n), h);
+  }
+  assert.notDeepEqual(buildHeist(31).layers[0]?.grid, buildHeist(30).layers[0]?.grid);
+});

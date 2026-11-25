@@ -16,7 +16,15 @@ export function nightFor(date: Date, start = SEASON_START): number {
   return utcDay(date) - utcDay(new Date(`${start}T00:00:00Z`)) + 1;
 }
 
-/** Tonight's night, clamped to the season (for display). */
+/**
+ * The Daily Heist's night number: Night 1 is SEASON_START and every UTC day after it is a new night,
+ * with no end (never clamped to SEASON_NIGHTS). Days before the start count as Night 1.
+ */
+export function nightNumber(date = new Date(), start = SEASON_START): number {
+  return Math.max(1, nightFor(date, start));
+}
+
+/** Tonight's night, clamped to the 30-night season (the 3D game's Dream Archive). */
 export function currentNight(date = new Date(), start = SEASON_START): number {
   return Math.max(1, Math.min(SEASON_NIGHTS, nightFor(date, start)));
 }
