@@ -1416,3 +1416,102 @@ button {
     opacity: 0.25;
   }
 }
+
+/* ================================================= polish: walls vs moves, guard facing, crew rings */
+
+/* Walls: solid, dark, raised blocks (top highlight, darker base), no glow. */
+.tile.wall {
+  background: linear-gradient(180deg, #24384a 0, #1a2938 16%, #121e2a 100%);
+  border: 1px solid #070d14;
+  border-radius: 3px;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.45);
+}
+.tile.wall.seen {
+  background: linear-gradient(180deg, #24384a 0, #1a2938 16%, #121e2a 100%);
+}
+
+/* Move targets: bright cyan with a pulsing border, clearly not a wall. */
+.tile.move {
+  background: rgba(0, 240, 255, 0.3);
+  box-shadow:
+    inset 0 0 0 2px #00f0ff,
+    inset 0 0 14px rgba(0, 240, 255, 0.55);
+}
+.tile.move::after,
+.tile.target::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px solid #9ffaff;
+  border-radius: 3px;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.85);
+  pointer-events: none;
+  animation: move-pulse 1.1s ease-in-out infinite;
+  will-change: opacity;
+}
+.tile.seen.move {
+  background: rgba(255, 46, 136, 0.42);
+  box-shadow:
+    inset 0 0 0 2px #00f0ff,
+    inset 0 0 14px rgba(255, 46, 136, 0.5);
+}
+@keyframes move-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Guards: a small arrow on the tile edge shows which way the flashlight points. */
+.guard .dir {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  margin: -6px 0 0 -5px;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 8px solid var(--guard);
+  filter: drop-shadow(0 0 3px var(--guard));
+  pointer-events: none;
+  transform: rotate(0deg) translateY(calc(var(--cell) * -0.56));
+  z-index: 2;
+}
+.guard[data-facing='r'] .dir {
+  transform: rotate(90deg) translateY(calc(var(--cell) * -0.56));
+}
+.guard[data-facing='d'] .dir {
+  transform: rotate(180deg) translateY(calc(var(--cell) * -0.56));
+}
+.guard[data-facing='l'] .dir {
+  transform: rotate(270deg) translateY(calc(var(--cell) * -0.56));
+}
+.guard.stunned .dir,
+.guard.hidden .dir {
+  opacity: 0;
+}
+
+/* Crew: a little smaller on the board, each always on its own coloured ground ring. */
+.op .face {
+  left: -6%;
+  right: -6%;
+  height: 106%;
+}
+.op .ring {
+  opacity: 0.6;
+  scale: 0.85;
+  border-width: 1.5px;
+  box-shadow: 0 0 6px var(--c);
+}
+.op.sel .ring {
+  opacity: 1;
+  scale: 1.05;
+  border-width: 2px;
+  box-shadow: 0 0 12px var(--c);
+}

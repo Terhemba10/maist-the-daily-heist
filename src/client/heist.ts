@@ -579,6 +579,24 @@ function apFloat(delta: number): void {
 // ------------------------------------------------------------------ tutorial
 
 const TUT = ['tut1', 'tut2', 'tut3', 'tut4'] as const;
+const TUT_KEY = 'heist.tutorialDone';
+
+/** The tutorial is shown once per player: on the first layer of their first play. */
+function tutorialDone(): boolean {
+  try {
+    return window.localStorage.getItem(TUT_KEY) === '1' || settings.onboarded;
+  } catch {
+    return settings.onboarded;
+  }
+}
+function markTutorialDone(): void {
+  try {
+    window.localStorage.setItem(TUT_KEY, '1');
+  } catch {
+    /* storage blocked: the setting below still records it for this session */
+  }
+  saveSettings({ onboarded: true });
+}
 
 function renderTutorial(): void {
   document.querySelector('.tip')?.remove();
@@ -597,7 +615,6 @@ function advanceTutorial(tapped = false): void {
   if (!app.tut) return;
   if (!tapped && Date.now() - app.tutAt < 3000) return;
   app.tut = app.tut >= TUT.length ? 0 : app.tut + 1;
-  if (!app.tut) saveSettings({ onboarded: true });
   renderTutorial();
 }
 
@@ -766,7 +783,7 @@ function buildPlay(): void {
     bob.append(sprite(g.kind === 'watcher' ? 'watcher' : 'guard', 'blink'));
     hop.append(bob);
     face.append(hop);
-    el.append(face, h('span', 'zzz', 'Zzz'));
+    el.append(h('span', 'dir'), face, h('span', 'zzz', 'Zzz'));
     el.addEventListener('click', () => onTile(app.s!.guards.find((q) => q.id === g.id)!.x, app.s!.guards.find((q) => q.id === g.id)!.y));
     guardEls.set(g.id, el);
     boardEl.append(el);
@@ -813,7 +830,11 @@ function buildPlay(): void {
   wrap.classList.add('dive');
   app.lastAp = s.ap;
   // First play: a short tutorial bubble instead of the full how-to.
-  if (!settings.onboarded && !app.tut) app.tut = 1;
+  if (app.li === 0 && !app.tut && !tutorialDone()) {
+    app.tut = 1;
+    // Saved as soon as it appears, so it never shows again (not on later layers, not on later plays).
+    markTutorialDone();
+  } else if (app.li > 0) app.tut = 0;
   renderTutorial();
 }
 
