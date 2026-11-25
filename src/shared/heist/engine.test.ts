@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { apply, buildHeist, canApply, newLayerState, replay, solveCost, totalScore, type Action, type LayerDef } from './engine.ts';
 
-test('every night 1-40 builds three solvable layers within their AP', () => {
+void test('every night 1-40 builds three solvable layers within their AP', () => {
   for (let n = 1; n <= 40; n++) {
     const h = buildHeist(n);
     assert.equal(h.layers.length, 3);
@@ -13,12 +13,12 @@ test('every night 1-40 builds three solvable layers within their AP', () => {
   }
 });
 
-test('maps are deterministic per night and differ between nights', () => {
+void test('maps are deterministic per night and differ between nights', () => {
   assert.deepEqual(buildHeist(5), buildHeist(5));
   assert.notDeepEqual(buildHeist(5).layers[0]?.grid, buildHeist(6).layers[0]?.grid);
 });
 
-test('tiers escalate: easy has statics, difficult has fog and watchers', () => {
+void test('tiers escalate: easy has statics, difficult has fog and watchers', () => {
   const h = buildHeist(3);
   assert.ok(h.layers[0]?.guards.every((g) => g.kind === 'static'));
   assert.equal(h.layers[1]?.guards.length, 4);
@@ -47,7 +47,7 @@ const tiny = (): LayerDef => {
   };
 };
 
-test('fold opens an adjacent wall for 2 AP', () => {
+void test('fold opens an adjacent wall for 2 AP', () => {
   // shaper at (2,8) stands next to the wall at (1,8); the ghost at (1,9) is under it
   let s = newLayerState({ ...tiny(), start: [[2, 8], [1, 9], [2, 9]] });
   assert.equal(canApply(s, { t: 'm', o: 1, d: 'u' }).ok, false);
@@ -57,14 +57,14 @@ test('fold opens an adjacent wall for 2 AP', () => {
   assert.equal(canApply(s, { t: 'm', o: 1, d: 'u' }).ok, true);
 });
 
-test('fold needs an adjacent wall; haze needs a guard in range', () => {
+void test('fold needs an adjacent wall; haze needs a guard in range', () => {
   const s = newLayerState(tiny());
   assert.equal(canApply(s, { t: 'a', o: 0, x: 1, y: 8 }).ok, false);
   assert.equal(canApply(s, { t: 'a', o: 1, x: 0, y: 0 }).ok, true); // fade
   assert.equal(canApply(s, { t: 'a', o: 2, x: 9, y: 9 }).ok, false); // guard too far
 });
 
-test('a static guard catches an operative that walks into its sight', () => {
+void test('a static guard catches an operative that walks into its sight', () => {
   const def = tiny();
   def.guards = [{ id: 0, kind: 'static', route: [[4, 9]], facing: 'l' }];
   let s = newLayerState(def);
@@ -73,7 +73,7 @@ test('a static guard catches an operative that walks into its sight', () => {
   assert.equal(s.ops[1]?.out, true);
 });
 
-test('fade lets the ghost walk through sight', () => {
+void test('fade lets the ghost walk through sight', () => {
   const def = tiny();
   def.guards = [{ id: 0, kind: 'static', route: [[4, 9]], facing: 'l' }];
   let s = newLayerState(def);
@@ -83,7 +83,7 @@ test('fade lets the ghost walk through sight', () => {
   assert.deepEqual(s.lastCaught, []);
 });
 
-test('replay scores a cleared layer and rejects illegal records', () => {
+void test('replay scores a cleared layer and rejects illegal records', () => {
   const def = tiny();
   const heist = { night: 0, layers: [def, def, def] };
   const path: Action[] = [
@@ -104,7 +104,7 @@ test('replay scores a cleared layer and rejects illegal records', () => {
   assert.equal(bad.ok, false);
 });
 
-test('limbo then kick restores AP and operatives', () => {
+void test('limbo then kick restores AP and operatives', () => {
   const def = { ...tiny(), ap: 2 };
   let s = newLayerState(def);
   s = apply(s, { t: 'w' });
