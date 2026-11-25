@@ -199,7 +199,7 @@ export type Check = { ok: true } | { ok: false; reason: string };
 
 /** Is this action legal right now? */
 export function canApply(s: LayerState, a: Action): Check {
-  if (a.t === 'kick') return s.status === 'limbo' ? { ok: true } : { ok: false, reason: 'not in limbo' };
+  if (a.t === 'kick') return s.status === 'limbo' ? { ok: true } : { ok: false, reason: 'not adrift' };
   if (s.status !== 'play') return { ok: false, reason: 'layer over' };
   if (a.t === 'w') return s.ap >= 1 ? { ok: true } : { ok: false, reason: 'no AP' };
   const o = s.ops[a.o];

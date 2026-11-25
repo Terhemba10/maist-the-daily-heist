@@ -11,9 +11,9 @@ A turn-based tactics game played inside a Reddit post, on phone and desktop.
   - **Wait** (1 AP) lets the guards move.
 - **Guards** see their own tile and 2-3 tiles ahead (red). Easy: static guards. Hard: 4 patrols. Difficult: 3 patrols, 2 watchers that turn toward you, and fog.
 - Get anyone onto the vault ◈ to crack the layer.
-- **Limbo and the Kick:** run out of AP or crew and you fall into Limbo. On tonight's post, the game can post a call
-  for help (as you) under the pinned thread. Anyone who replies **WAKE UP** sends you a Kick: +6 AP and your crew comes back.
-- **Score:** 200 per vault + 100 per AP left + 50 per layer without a Kick. One scored run per day; the server replays
+- **Adrift and the Pull:** run out of AP or crew and you go adrift. On tonight's post, the game can post a call
+  for help (as you) under the pinned thread. Anyone who replies **WAKE UP** sends you a Pull: +6 AP and your crew comes back.
+- **Score:** 200 per vault + 100 per AP left + 50 per layer without a Pull. One scored run per day; the server replays
   every run to compute the score. Daily leaderboard with Snoovatars, streaks, and "Share to the thread".
 - Languages: English, 中文, 日本語, Deutsch, हिन्दी.
 

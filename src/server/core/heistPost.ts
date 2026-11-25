@@ -27,7 +27,7 @@ export async function createHeistPost(opts: { night?: number; force?: boolean } 
   try {
     const pin = await reddit.submitComment({
       id: post.id,
-      text: `🔐 **Night ${night} crew thread.** Share your heist here. Stuck in Limbo? The game can post a call for help: reply **WAKE UP** to someone's call to send them a Kick.`,
+      text: `🔐 **Night ${night} crew thread.** Share your heist here. Stuck adrift? The game can post a call for help: reply **WAKE UP** to someone's call to send them a Pull.`,
     });
     await pin.distinguish(true);
     await redis.hSet(HK.post(post.id), { pinId: pin.id });

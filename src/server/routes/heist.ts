@@ -111,7 +111,7 @@ heist.post('/run', async (c) => {
     if (body.scored && night === today()) {
       // Kicks must have been sent by other players through the comment thread.
       const k = await kickState(night, userId);
-      if (r.kicks > k.granted) return err(c, 'Run rejected: kick not received yet');
+      if (r.kicks > k.granted) return err(c, 'Run rejected: Pull not received yet');
       const claimed = await redis.set(HK.scored(night, userId), String(score), { nx: true, expiration: exp(HTTL.night) });
       scoredNow = claimed === 'OK';
       if (scoredNow) {
@@ -132,29 +132,29 @@ heist.post('/run', async (c) => {
 
 heist.post('/limbo', async (c) => {
   const { userId, postId } = context;
-  if (!userId || !postId) return c.json<LimboRes>({ ok: false, message: 'Log in to call for a Kick.' });
+  if (!userId || !postId) return c.json<LimboRes>({ ok: false, message: 'Log in to ask for a Pull.' });
   const body = await c.req.json<LimboReq>();
   const night = Number(body.night);
-  if (night !== today()) return c.json<LimboRes>({ ok: false, message: 'Kicks only work on tonight’s heist.' });
+  if (night !== today()) return c.json<LimboRes>({ ok: false, message: 'Pulls only work on tonight’s heist.' });
   if (await redis.get(HK.scored(night, userId))) return c.json<LimboRes>({ ok: false, message: 'Your scored run is already in.' });
   if (!isRecord(body.record)) return err(c, 'Bad run');
   const r = replay(buildHeist(night), body.record);
-  if (!r.ok || r.final?.status !== 'limbo') return c.json<LimboRes>({ ok: false, message: 'You are not in Limbo.' });
+  if (!r.ok || r.final?.status !== 'limbo') return c.json<LimboRes>({ ok: false, message: 'You are not adrift.' });
   const k = await kickState(night, userId);
   const usedBefore = Number((await redis.hGet(HK.help(night, userId), 'used')) ?? -1);
-  if (k.granted > r.kicks) return c.json<LimboRes>({ ok: true, message: 'A Kick is waiting for you!' });
+  if (k.granted > r.kicks) return c.json<LimboRes>({ ok: true, message: 'A Pull is waiting for you!' });
   if (k.asked && usedBefore === r.kicks) return c.json<LimboRes>({ ok: true, message: 'Your call is already in the thread. Waiting for a reply…' });
 
   const pinId = await redis.hGet(HK.post(postId), 'pinId');
   if (!pinId || !isT1(pinId)) return c.json<LimboRes>({ ok: false, message: 'This post has no help thread yet.' });
   const layer = r.results.length;
   // Fixed text built on the server: players can't post free text through the app.
-  const text = `🌀 I'm stuck in **Limbo** on layer ${layer} of tonight's heist with ${r.final.ap} AP left. Reply **WAKE UP** to send me a Kick!`;
+  const text = `🌀 I'm **adrift** on layer ${layer} of tonight's heist with ${r.final.ap} AP left. Reply **WAKE UP** to send me a Pull!`;
   try {
     const comment = await reddit.submitComment({ id: pinId, text, runAs: 'USER' });
     await redis.hSet(HK.help(night, userId), { commentId: comment.id, granted: String(k.granted), used: String(r.kicks) });
     await redis.expire(HK.help(night, userId), HTTL.night);
-    return c.json<LimboRes>({ ok: true, message: 'Posted! Anyone who replies WAKE UP sends you a Kick.', url: comment.permalink });
+    return c.json<LimboRes>({ ok: true, message: 'Posted! Anyone who replies WAKE UP sends you a Pull.', url: comment.permalink });
   } catch (e) {
     console.error('limbo post failed', e);
     return c.json<LimboRes>({ ok: false, message: 'Could not post right now.' });
@@ -221,7 +221,7 @@ heist.post('/share', async (c) => {
   const pinId = await redis.hGet(HK.post(postId), 'pinId');
   if (!pinId || !isT1(pinId)) return c.json<ShareRes>({ ok: false, message: 'This post has no share thread yet.' });
   const vaults = '🔓'.repeat(last.cleared) + '🔒'.repeat(Math.max(0, 3 - last.cleared));
-  const text = `Night ${last.night} heist: ${vaults} · **${last.score}** pts${last.kicks ? ` · ${last.kicks} Kick${last.kicks > 1 ? 's' : ''}` : ' · no Kicks'}`;
+  const text = `Night ${last.night} heist: ${vaults} · **${last.score}** pts${last.kicks ? ` · ${last.kicks} Pull${last.kicks > 1 ? 's' : ''}` : ' · no Pulls'}`;
   try {
     const comment = await reddit.submitComment({ id: pinId, text, runAs: 'USER' });
     return c.json<ShareRes>({ ok: true, message: 'Posted!', url: comment.permalink });
