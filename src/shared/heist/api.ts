@@ -18,6 +18,8 @@ export type HeistInit = {
   kicks: { granted: number; asked: boolean };
   /** How many crews have a scored run on this post's night (the leaderboard size). */
   crews: number;
+  /** Your scores on the last 3 nights up to tonight (null = not played). */
+  history: { night: number; score: number | null }[];
   nextMs: number;
 };
 
@@ -32,3 +34,6 @@ export type BoardRow = { rank: number; name: string; score: number; snoovatar: s
 export type BoardRes = { night: number; rows: BoardRow[]; me: BoardRow | null; total: number };
 
 export type ShareRes = { ok: boolean; message: string; url?: string };
+
+/** Tonight's #1 run, replayed one action per player action as a ghost crew. */
+export type GhostRes = { ok: boolean; night: number; name?: string; record?: RunRecord };

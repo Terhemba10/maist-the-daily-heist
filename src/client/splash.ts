@@ -1,6 +1,7 @@
 import { context, requestExpandedMode } from '@devvit/web/client';
 import type { HeistInit } from '../shared/heist/api.ts';
 import { ART, isArtName } from './art/index.ts';
+import './prefs.ts'; // applies the saved or system light/dark theme
 import { currentNight, msUntilNextDream } from '../shared/logic/season.ts';
 
 const $ = (id: string) => document.getElementById(id);

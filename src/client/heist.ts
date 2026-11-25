@@ -1,8 +1,9 @@
 import { CREW_ART, sprite } from './art/index.ts';
 import { audio } from './core/audio.ts';
+import { activeTheme, prefs, savePrefs, type ThemePref } from './prefs.ts';
 import { saveSettings, settings } from './core/settings.ts';
 import { getLang, LANGS, setLang, t, type Key, type Lang } from './i18n/heist.ts';
-import type { BoardRes, HeistInit, KickRes, LimboRes, RunRes, ShareRes } from '../shared/heist/api.ts';
+import type { BoardRes, GhostRes, HeistInit, KickRes, LimboRes, RunRes, ShareRes } from '../shared/heist/api.ts';
 import {
   apply,
   buildHeist,
@@ -18,6 +19,7 @@ import {
   type Action,
   type Dir,
   type HeistDef,
+  type RunRecord,
   type LayerState,
   type Tier,
   type OpId,
@@ -56,6 +58,9 @@ const app = {
   /** First-play tutorial step (1-4), 0 when off. */
   tut: 0,
   tutAt: 0,
+  /** Tonight's #1 run, replayed one action per player action. */
+  ghost: null as null | { name: string; record: RunRecord; s: LayerState | null; i: number; lastOp: number },
+  idleTimer: 0,
   lastAp: 0,
   nextAt: Date.now() + msUntilNextDream(),
 };
@@ -178,9 +183,62 @@ function topBar(): HTMLElement {
     audio.applyVolumes();
     snd.textContent = on ? '🔊' : '🔇';
   });
-  tools.append(sel, snd);
+  const theme = h('button', 'icon', activeTheme() === 'light' ? '☀️' : '🌙');
+  theme.setAttribute('aria-label', t('theme'));
+  theme.title = t('theme');
+  theme.addEventListener('click', () => {
+    savePrefs({ theme: activeTheme() === 'light' ? 'dark' : 'light' });
+    theme.textContent = activeTheme() === 'light' ? '☀️' : '🌙';
+  });
+  const gear = h('button', 'icon', '⚙');
+  gear.setAttribute('aria-label', t('settings'));
+  gear.title = t('settings');
+  gear.addEventListener('click', showSettings);
+  tools.append(sel, snd, theme, gear);
   bar.append(who, tools);
   return bar;
+}
+
+/** A row of choices; the chosen one is highlighted. */
+function seg<T extends string>(values: readonly T[], label: (v: T) => string, current: () => T, set: (v: T) => void): HTMLElement {
+  const row = h('div', 'seg');
+  const buttons = values.map((v) => {
+    const b = h('button', `seg-btn${current() === v ? ' on' : ''}`, label(v));
+    b.setAttribute('aria-pressed', String(current() === v));
+    b.addEventListener('click', () => {
+      set(v);
+      buttons.forEach((x, i) => {
+        const on = values[i] === current();
+        x.classList.toggle('on', on);
+        x.setAttribute('aria-pressed', String(on));
+      });
+    });
+    return b;
+  });
+  row.append(...buttons);
+  return row;
+}
+
+function showSettings(): void {
+  const body = h('div', 'settings-list');
+  const row = (label: string, control: HTMLElement, desc = '') => {
+    const r = h('div', 'set-row');
+    const l = h('div', 'set-label', label);
+    if (desc) l.append(h('small', '', desc));
+    r.append(l, control);
+    body.append(r);
+  };
+  row(t('theme'), seg(['system', 'light', 'dark'] as const, (v: ThemePref) => t(v === 'system' ? 'themeSystem' : v === 'light' ? 'themeLight' : 'themeDark'), () => prefs.theme, (v) => savePrefs({ theme: v })));
+  row(
+    t('ghostRace'),
+    seg(['on', 'off'] as const, (v) => t(v), () => (prefs.ghost ? 'on' : 'off'), (v) => {
+      savePrefs({ ghost: v === 'on' });
+      if (app.mode === 'play') renderGhost();
+    }),
+    t('ghostRaceDesc')
+  );
+  row(t('bigText'), seg(['on', 'off'] as const, (v) => t(v), () => (prefs.bigText ? 'on' : 'off'), (v) => savePrefs({ bigText: v === 'on' })));
+  modal(t('settings'), body);
 }
 
 function renderTitle(): void {
@@ -198,7 +256,7 @@ function renderTitle(): void {
     c.append(pic, h('b', '', shortName(i)), h('small', '', `${t(sq.ability)} · ${sq.cost} AP`));
     squad.append(c);
   });
-  hero.append(squad);
+  hero.append(squad, seasonStrip());
 
   const status = h('p', 'status');
   const init = app.init;
@@ -226,6 +284,28 @@ function renderTitle(): void {
   const cd = h('p', 'countdown', t('next', { t: fmtCountdown() }));
   wrap.append(hero, status, actions, cd);
   ui.append(wrap);
+}
+
+/** Your last 3 nights (scores) and the next 3 (locked, with the time until they unlock). */
+function seasonStrip(): HTMLElement {
+  const wrap = h('div', 'season');
+  wrap.append(h('p', 'season-title', t('yourNights')));
+  const row = h('div', 'season-row');
+  const today = app.init?.today ?? app.night;
+  const past = app.init?.history?.length ? app.init.history : [{ night: today, score: null }];
+  for (const d of past) {
+    const tile = h('div', `night-tile${d.night === today ? ' now' : ''}${d.score === null ? ' empty' : ''}`);
+    tile.append(h('b', '', d.night === today ? t('tonight') : t('night', { n: d.night })), h('span', '', d.score === null ? t('notPlayed') : t('pts', { score: d.score })));
+    row.append(tile);
+  }
+  const hours = Math.max(1, Math.ceil((app.nextAt - Date.now()) / 3_600_000));
+  for (let k = 1; k <= 3 && today + k <= 30; k++) {
+    const tile = h('div', 'night-tile locked');
+    tile.append(h('b', '', `🔒 ${t('night', { n: today + k })}`), h('span', '', t('unlocksIn', { h: hours + 24 * (k - 1) })));
+    row.append(tile);
+  }
+  wrap.append(row);
+  return wrap;
 }
 
 window.setInterval(() => {
@@ -322,6 +402,7 @@ function startRun(scored: boolean, saved: Action[][] | null): void {
   app.record[app.li] = app.record[app.li] ?? [];
   app.sel = firstActive();
   app.targeting = false;
+  void loadGhost();
   audio.playMusic(app.li);
   renderPlay(true);
   if (app.s.status === 'limbo') showLimbo();
@@ -352,6 +433,8 @@ function act(a: Action): void {
     retrigger(opEls[a.o], 'cast');
   } else audio.click();
   advanceTutorial();
+  stepGhost();
+  wakeFromIdle();
   for (const o of n.lastCaught) {
     audio.caught();
     toast(t('caught', { name: opName(o) }));
@@ -393,6 +476,7 @@ function showCleared(): void {
       app.sel = 0;
       saveProgress();
       audio.playMusic(app.li);
+      resetGhost();
       renderPlay(true);
     }
   });
@@ -474,6 +558,7 @@ function pollKick(msg: HTMLElement, ask: HTMLElement): void {
 
 async function finish(): Promise<void> {
   setLayerBg(null);
+  window.clearTimeout(app.idleTimer);
   window.clearInterval(app.kickTimer);
   app.mode = 'over';
   audio.bloom();
@@ -576,6 +661,103 @@ function apFloat(delta: number): void {
   window.setTimeout(() => f.remove(), 900);
 }
 
+// ------------------------------------------------------------------ ghost race
+
+/** On tonight's post, fetch tonight's #1 run (unless it's yours) to race against. */
+async function loadGhost(): Promise<void> {
+  app.ghost = null;
+  const init = app.init;
+  if (!init || app.night !== init.today || init.postNight !== init.today) return;
+  const g = await call<GhostRes>(`ghost?night=${app.night}`);
+  if (!g?.ok || !g.name || !g.record || g.name === init.username || app.mode !== 'play') return;
+  app.ghost = { name: g.name, record: g.record, s: null, i: 0, lastOp: 0 };
+  resetGhost();
+  renderGhost();
+}
+
+function resetGhost(): void {
+  const g = app.ghost;
+  if (!g || !app.heist) return;
+  const def = app.heist.layers[app.li];
+  g.s = def ? newLayerState(def) : null;
+  g.i = 0;
+  g.lastOp = 0;
+}
+
+/** The ghost takes one (valid) action from its record each time you act. */
+function stepGhost(): void {
+  const g = app.ghost;
+  if (!g?.s || g.s.status !== 'play') return;
+  const acts = g.record.layers[app.li] ?? [];
+  while (g.i < acts.length) {
+    const a = acts[g.i++];
+    if (!a || !canApply(g.s, a).ok) continue;
+    g.s = apply(g.s, a);
+    if (a.t === 'm' || a.t === 'a') g.lastOp = a.o;
+    break;
+  }
+  renderGhost();
+}
+
+const ghostEls: HTMLElement[] = [];
+let ghostTag: HTMLElement | null = null;
+
+function renderGhost(): void {
+  const g = app.ghost;
+  const show = !!g?.s && prefs.ghost && app.mode === 'play' && !!boardEl;
+  if (!show) {
+    ghostEls.forEach((e) => e.classList.add('gone'));
+    ghostTag?.classList.add('gone');
+    return;
+  }
+  if (!ghostEls.length || !boardEl?.contains(ghostEls[0] ?? null)) {
+    ghostEls.length = 0;
+    CREW_ART.forEach((name, i) => {
+      const el = h('div', `op ghost c${i}`);
+      const face = h('span', 'face');
+      face.append(sprite(name));
+      el.append(face);
+      ghostEls.push(el);
+      boardEl!.append(el);
+    });
+    ghostTag = h('div', 'ghost-tag');
+    boardEl!.append(ghostTag);
+  }
+  const s = g!.s!;
+  s.ops.forEach((o, i) => {
+    const el = ghostEls[i];
+    if (!el) return;
+    el.classList.toggle('gone', o.out);
+    place(el, o.x, o.y, false);
+  });
+  const lead = s.ops[g!.lastOp] ?? s.ops[0];
+  if (ghostTag && lead) {
+    ghostTag.textContent = t('ghostOf', { name: g!.name });
+    ghostTag.classList.remove('gone');
+    ghostTag.style.transform = `translate(calc(var(--cell) * ${lead.x} + var(--cell) / 2), calc(var(--cell) * ${lead.y}))`;
+  }
+}
+
+// ------------------------------------------------------------------ living board
+
+/** After 5 s without a move the crew look around; any action wakes them. */
+function wakeFromIdle(): void {
+  boardEl?.classList.remove('idle');
+  window.clearTimeout(app.idleTimer);
+  app.idleTimer = window.setTimeout(() => {
+    if (app.mode === 'play' && !document.querySelector('.modal-back')) boardEl?.classList.add('idle');
+  }, 5000);
+}
+
+/** A small puff of dust where a crew member just stepped off. */
+function puff(x: number, y: number): void {
+  if (!boardEl) return;
+  const p = h('span', 'puff');
+  p.style.transform = `translate(calc(var(--cell) * ${x}), calc(var(--cell) * ${y}))`;
+  boardEl.append(p);
+  window.setTimeout(() => p.remove(), 600);
+}
+
 // ------------------------------------------------------------------ tutorial
 
 const TUT = ['tut1', 'tut2', 'tut3', 'tut4'] as const;
@@ -647,6 +829,7 @@ function place(el: HTMLElement, x: number, y: number, isGuard: boolean): void {
   const py = Number(el.dataset.y ?? y);
   if (px !== x || py !== y) {
     if (!isGuard && x !== px) el.dataset.face = x < px ? 'l' : 'r';
+    if (!isGuard && !el.classList.contains('ghost') && el.dataset.x !== undefined) puff(px, py);
     retrigger(el.querySelector<HTMLElement>('.hop') ?? undefined, 'go');
   }
   el.dataset.x = String(x);
@@ -770,13 +953,18 @@ function buildPlay(): void {
     const el = h('div', 'tile');
     const x = i % SIZE;
     const y = Math.floor(i / SIZE);
-    if (x === s.def.vault[0] && y === s.def.vault[1]) el.append(sprite('vault'));
+    if (x === s.def.vault[0] && y === s.def.vault[1]) {
+      const v = sprite('vault');
+      v.append(h('span', 'glint'));
+      el.append(v);
+    }
     el.addEventListener('click', () => onTile(x, y));
     tiles.push(el);
     boardEl.append(el);
   }
   for (const g of s.guards) {
     const el = h('div', `guard${g.kind === 'watcher' ? ' watcher' : ''}`);
+    el.style.setProperty('--blink', `${(0.9 + ((g.id * 7) % 5) * 0.35).toFixed(2)}s`);
     const face = h('span', 'face');
     const hop = h('span', 'hop');
     const bob = h('span', 'bob');
@@ -822,13 +1010,20 @@ function buildPlay(): void {
   wait.title = t('waitDesc');
   wait.addEventListener('click', () => act({ t: 'w' }));
   const how = h('button', 'btn icon', '?');
+  how.setAttribute('aria-label', t('howto'));
   how.addEventListener('click', showHowTo);
-  row.append(ab, wait, how);
+  const gear = h('button', 'btn icon', '⚙');
+  gear.setAttribute('aria-label', t('settings'));
+  gear.addEventListener('click', showSettings);
+  row.append(ab, wait, how, gear);
   panel.append(cards, row, h('p', 'hint'));
   wrap.append(hud, stage, panel);
   ui.append(wrap);
   wrap.classList.add('dive');
   app.lastAp = s.ap;
+  ghostEls.length = 0;
+  renderGhost();
+  wakeFromIdle();
   // First play: a short tutorial bubble instead of the full how-to.
   if (app.li === 0 && !app.tut && !tutorialDone()) {
     app.tut = 1;

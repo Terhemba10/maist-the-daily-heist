@@ -6,6 +6,8 @@ export const HK = {
   scored: (n: number, uid: string) => `h:scored:${n}:${uid}`,
   user: (uid: string) => `h:user:${uid}`,
   help: (n: number, uid: string) => `h:help:${n}:${uid}`,
+  /** The night's #1 scored run (name + record), replayed as the ghost crew. */
+  ghost: (n: number) => `h:ghost:${n}`,
 };
 
 export const HTTL = {

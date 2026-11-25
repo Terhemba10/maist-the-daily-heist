@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Context as HonoContext } from 'hono';
 import { context, reddit, redis } from '@devvit/web/server';
-import type { BoardRes, BoardRow, HeistInit, KickRes, LimboReq, LimboRes, RunReq, RunRes, ShareRes, Streak } from '../../shared/heist/api';
+import type { BoardRes, BoardRow, GhostRes, HeistInit, KickRes, LimboReq, LimboRes, RunReq, RunRes, ShareRes, Streak } from '../../shared/heist/api';
 import { buildHeist, isRecord, replay, totalScore, type LayerResult } from '../../shared/heist/engine';
 import { msUntilNextDream, nightFor } from '../../shared/logic/season';
 import { HK, HTTL } from '../core/heistKeys';
@@ -58,7 +58,12 @@ heist.get('/init', async (c) => {
   let scored: HeistInit['scored'] = null;
   let streak: Streak = { count: 0, best: 0, lastNight: 0 };
   let kicks: KickRes = { granted: 0, asked: false };
+  const history: HeistInit['history'] = [];
   if (userId) {
+    for (let n = Math.max(1, t - 2); n <= t; n++) {
+      const v = await redis.get(HK.scored(n, userId));
+      history.push({ night: n, score: v ? Number(v) : null });
+    }
     const raw = await redis.get(HK.scored(t, userId));
     if (raw) scored = { score: Number(raw), rank: await rankOf(HK.board(t), userId) };
     streak = await readStreak(userId);
@@ -76,6 +81,7 @@ heist.get('/init', async (c) => {
     streak,
     kicks,
     crews: await redis.zCard(HK.board(postNight())),
+    history,
     nextMs: msUntilNextDream(),
   });
 });
@@ -119,6 +125,8 @@ heist.post('/run', async (c) => {
         await redis.zAdd(HK.board(night), { member: userId, score });
         await redis.expire(HK.board(night), HTTL.night);
         rank = await rankOf(HK.board(night), userId);
+        // The night's #1 run becomes the ghost everyone can race.
+        if (rank === 1) await redis.set(HK.ghost(night), JSON.stringify({ name, record: body.record }), { expiration: exp(HTTL.night) });
         const cleared = results.filter((x) => x.cleared).length;
         await touchUser(userId, { last: JSON.stringify({ night, score, cleared, kicks: r.kicks }) });
         streak = await updateStreak(userId, night);
@@ -230,4 +238,22 @@ heist.post('/share', async (c) => {
     console.error('share failed', e);
     return c.json<ShareRes>({ ok: false, message: 'Could not post right now.' });
   }
+});
+
+// ---------------------------------------------------------------- ghost race
+
+heist.get('/ghost', async (c) => {
+  const night = Number(c.req.query('night') ?? today());
+  if (!Number.isInteger(night) || night < 1 || night > today()) return c.json<GhostRes>({ ok: false, night });
+  const raw = await redis.get(HK.ghost(night));
+  if (!raw) return c.json<GhostRes>({ ok: false, night });
+  try {
+    const g: unknown = JSON.parse(raw);
+    if (typeof g === 'object' && g !== null && 'name' in g && typeof g.name === 'string' && 'record' in g && isRecord(g.record)) {
+      return c.json<GhostRes>({ ok: true, night, name: g.name, record: g.record });
+    }
+  } catch {
+    /* fall through */
+  }
+  return c.json<GhostRes>({ ok: false, night });
 });

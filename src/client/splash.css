@@ -22,7 +22,7 @@ body {
 }
 .kicker {
   margin: 0;
-  font-size: 12px;
+  font-size: calc(14px * var(--fs, 1));
   letter-spacing: 0.3em;
   color: #00f0ff;
 }
@@ -38,7 +38,7 @@ body {
 .tag {
   margin: 0;
   color: #8aa6b8;
-  font-size: 13px;
+  font-size: calc(14px * var(--fs, 1));
 }
 .scene {
   position: relative;
@@ -137,7 +137,7 @@ body {
   margin: 4px 0 0;
   color: #ffd166;
   font-weight: 700;
-  font-size: 14px;
+  font-size: calc(14px * var(--fs, 1));
   min-height: 1.2em;
 }
 @keyframes bob {
@@ -164,7 +164,7 @@ body {
 }
 .who {
   margin: 0;
-  font-size: 12px;
+  font-size: calc(14px * var(--fs, 1));
   color: #8aa6b8;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -208,4 +208,52 @@ body {
     radial-gradient(1px 1px at 84% 16%, rgba(230, 251, 255, 0.5), transparent),
     radial-gradient(ellipse at 86% 78%, rgba(255, 209, 102, 0.18), transparent 45%),
     radial-gradient(ellipse at 50% 0%, rgba(0, 240, 255, 0.12), transparent 60%);
+}
+
+/* ---- daylight blueprint (light theme): follows the system setting or the in-game sun/moon toggle */
+:root[data-theme='light'] body,
+:root[data-theme='light'] html {
+  background:
+    linear-gradient(rgba(27, 42, 74, 0.12) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, rgba(27, 42, 74, 0.12) 1px, transparent 1px) 0 0 / 24px 24px,
+    #f4f1e8;
+  color: #1b2a4a;
+}
+:root[data-theme='light'] .kicker {
+  color: #0b5e68;
+}
+:root[data-theme='light'] .logo {
+  color: #1b2a4a;
+  text-shadow: none;
+}
+:root[data-theme='light'] .tag,
+:root[data-theme='light'] .who {
+  color: #4a5670;
+}
+:root[data-theme='light'] .scene {
+  background: #ffffff;
+  border-color: rgba(27, 42, 74, 0.35);
+}
+:root[data-theme='light'] .scene .floor {
+  background: #dfe6ee;
+}
+:root[data-theme='light'] .scene .sky {
+  background:
+    radial-gradient(ellipse at 86% 78%, rgba(255, 209, 102, 0.35), transparent 45%),
+    radial-gradient(ellipse at 50% 0%, rgba(0, 166, 184, 0.12), transparent 60%);
+}
+:root[data-theme='light'] .scene .beam {
+  background: rgba(232, 71, 95, 0.3);
+}
+:root[data-theme='light'] .scene .zzz {
+  color: #1f7a4a;
+}
+:root[data-theme='light'] .crews,
+:root[data-theme='light'] .status {
+  color: #8a5a00;
+}
+:root[data-theme='light'] .go {
+  background: #1b2a4a;
+  color: #ffffff;
+  box-shadow: none;
 }
