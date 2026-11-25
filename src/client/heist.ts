@@ -19,6 +19,7 @@ import {
   type Dir,
   type HeistDef,
   type LayerState,
+  type Tier,
   type OpId,
 } from '../shared/heist/engine.ts';
 import { currentNight, msUntilNextDream } from '../shared/logic/season.ts';
@@ -115,6 +116,26 @@ function toast(msg: string): void {
   toastTimer = window.setTimeout(() => el?.classList.remove('on'), 2200);
 }
 
+// ------------------------------------------------------------------ layer background
+
+/**
+ * One persistent background behind the UI (outside #ui, which is rebuilt every layer), so its colours
+ * can fade from one layer's mood to the next. 4 light rays + 12 dust motes, all CSS.
+ */
+const layerBg = (() => {
+  const el = h('div', 'layer-bg');
+  el.setAttribute('aria-hidden', 'true');
+  for (let i = 0; i < 4; i++) el.append(h('i', `ray r${i}`));
+  for (let i = 0; i < 12; i++) el.append(h('b', `dust d${i}`));
+  document.body.prepend(el);
+  return el;
+})();
+
+function setLayerBg(tier: Tier | null): void {
+  if (tier) layerBg.dataset.tier = tier;
+  layerBg.classList.toggle('on', tier !== null);
+}
+
 // ------------------------------------------------------------------ title
 
 function fmtCountdown(): string {
@@ -163,6 +184,7 @@ function topBar(): HTMLElement {
 }
 
 function renderTitle(): void {
+  setLayerBg(null);
   ui.replaceChildren();
   const wrap = h('main', 'title-screen');
   wrap.append(topBar());
@@ -451,6 +473,7 @@ function pollKick(msg: HTMLElement, ask: HTMLElement): void {
 }
 
 async function finish(): Promise<void> {
+  setLayerBg(null);
   window.clearInterval(app.kickTimer);
   app.mode = 'over';
   audio.bloom();
@@ -710,6 +733,7 @@ function buildPlay(): void {
   const s = app.s!;
   ui.replaceChildren();
   const wrap = h('main', `play tier-${s.def.tier}`);
+  setLayerBg(s.def.tier);
   const hud = h('div', 'hud');
   const left = h('div', 'hud-left');
   left.append(h('span', 'kicker', `${t('night', { n: app.night })} · ${app.scored ? t('scoredTag') : t('practiceTag')}`), h('b', 'layer-name', `${t('layer', { i: app.li + 1 })} · ${tierName(app.li)}`));
