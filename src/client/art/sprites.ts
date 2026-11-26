@@ -26,8 +26,6 @@ import guardSide from './sprites/guard-side.webp';
 import guardSideSm from './sprites/guard-side-sm.webp';
 import guardBack from './sprites/guard-back.webp';
 import guardBackSm from './sprites/guard-back-sm.webp';
-import room from './sprites/room-office.webp';
-import roomSm from './sprites/room-office-sm.webp';
 
 export type FigureName = 'vale' | 'wren' | 'oto' | 'guard';
 export type View = 'front' | 'side' | 'back';
@@ -56,6 +54,3 @@ export const FIGURES: Record<FigureName, Record<View, readonly [string, string]>
     back: [guardBack, guardBackSm],
   },
 };
-
-/** The office floor (layer 1 as drawn; Hard and Difficult are colour-graded in CSS). */
-export const ROOM: readonly [string, string] = [room, roomSm];

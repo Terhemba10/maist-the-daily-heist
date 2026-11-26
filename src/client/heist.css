@@ -2269,12 +2269,56 @@ html {
 }
 
 /* ---- figures on the board: taller than a tile, feet on their own tile */
+/* The figure (228 of the 256 px canvas) is 1.7 tiles tall: canvas = 1.7 * 256 / 228 = 191% of a tile.
+   The feet (93% down the canvas) stand on the tile centre, so the figure overflows upwards. */
 .board.room .op .face,
 .board.room .guard .face {
-  left: -18%;
-  right: -18%;
-  bottom: 0;
-  height: 182%;
+  left: -16%;
+  right: -16%;
+  bottom: 36.6%;
+  height: 191%;
+  pointer-events: none; /* taps go to the 44 px target below, not to the tile above */
+}
+/* tap target: at least 44 px, centred on the feet */
+.board.room .op::before,
+.board.room .guard::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(44px, 100%);
+  height: max(44px, 100%);
+  translate: -50% -50%;
+}
+/* a coloured ground ring under every figure (crew colour; red for robots, violet for watchers) */
+.board.room .ring {
+  left: 10%;
+  right: 10%;
+  bottom: 34%;
+  height: 32%;
+  opacity: 0.9;
+  scale: 1;
+  border-width: 2px;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--c) 26%, transparent);
+}
+.board.room .op.sel .ring {
+  border-width: 3px;
+  scale: 1.12;
+  opacity: 1;
+  box-shadow: 0 0 10px var(--c);
+}
+.board.room .op.out .ring {
+  opacity: 0.3;
+}
+.board.room .guard .ring {
+  --c: #e8475f;
+}
+.board.room .guard.watcher .ring {
+  --c: #9b6bff;
+}
+.board.room .guard.stunned .ring {
+  opacity: 0.4;
 }
 .board.room .op[data-face] .face,
 .board.room .guard[data-facing] .face {
@@ -2371,10 +2415,11 @@ html {
 .board.room .guard .cone {
   position: absolute;
   left: 50%;
-  top: 60%;
-  width: calc(var(--cell) * (var(--sight, 0) + 0.45));
+  top: 22%;
+  width: calc(var(--cell) * (var(--range, 2) + 0.45));
   height: calc(var(--cell) * 1.15);
   translate: 0 -50%;
+  scale: calc((var(--sight, 0) + 0.45) / (var(--range, 2) + 0.45)) 1;
   transform-origin: 0 50%;
   clip-path: polygon(0 40%, 100% 0, 100% 100%, 0 60%);
   background: linear-gradient(90deg, rgba(255, 232, 140, 0.8), rgba(255, 232, 140, 0.06));
@@ -2382,7 +2427,7 @@ html {
   z-index: -1;
   transition:
     rotate 0.15s,
-    width 0.15s;
+    scale 0.15s;
 }
 .board.room .guard[data-facing='d'] .cone {
   rotate: 90deg;
@@ -2397,40 +2442,29 @@ html {
 .board.room .guard.hidden .cone {
   display: none;
 }
-/* watchers (they turn towards you): a violet ring underfoot */
-.board.room .guard .hop {
-  position: relative;
-}
-.board.room .guard.watcher .hop::before {
-  content: '';
-  position: absolute;
-  left: 18%;
-  right: 18%;
-  bottom: 2%;
-  height: 18%;
-  border-radius: 50%;
-  border: 2px solid #9b6bff;
-  background: rgba(155, 107, 255, 0.18);
-}
 
-/* ---- the office floor, graded per tier (overlays, no filters) */
+/* ---- the office floor: wood planks and white tiles drawn on a canvas, graded per tier (overlays) */
 .board.room {
-  background: #e9e4d8;
+  background: #f3efe6;
   overflow: hidden;
+  isolation: isolate;
 }
 .board.room .floor {
   position: absolute;
   inset: 0;
-  background-size: 100% 100%;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
 }
-/* a veil mutes the furniture drawn into the room so the real walls (blocks) read first */
+.board.room .floor canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 .board.room .floor::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(255, 255, 255, 0.5);
+  background: transparent;
 }
 .tier-hard .board.room .floor::after {
   background: linear-gradient(rgba(70, 120, 190, 0.32), rgba(70, 120, 190, 0.32)), rgba(235, 242, 250, 0.3);
@@ -2449,10 +2483,6 @@ html {
 }
 
 /* tiles: see-through with a faint grid; highlights, sight and fog stay as they were */
-.board.room .tile {
-  position: relative;
-  z-index: 1;
-}
 :root .board.room .tile:not(.wall):not(.seen):not(.fog):not(.move):not(.target) {
   background: transparent;
   border: 1px solid rgba(30, 40, 52, 0.13);
@@ -2463,33 +2493,27 @@ html {
 :root[data-theme='dark'] .board.room .tile:not(.wall):not(.seen):not(.fog):not(.move):not(.target) {
   border-color: rgba(200, 225, 255, 0.1);
 }
-/* walls: desks (light top, darker front edge) and filing cabinets (drawer lines) */
+/* walls: desks and filing cabinets, navy-grey top, darker front face, small shadow (same on every layer) */
 :root .board.room .tile.wall:not(.fog) {
-  background: linear-gradient(180deg, #f4f7f7 0 60%, #aebdc4 60% 100%);
-  border: 1px solid #4f5f69;
+  background: linear-gradient(180deg, #4a5a70 0 6%, #3a4859 6% 62%, #232e3c 62% 100%);
+  border: 1px solid #18212c;
   border-radius: 4px;
-  box-shadow: 0 3px 0 rgba(20, 30, 40, 0.38);
+  box-shadow: 0 3px 0 rgba(10, 16, 24, 0.45);
 }
 :root .board.room .tile.wall.alt:not(.fog) {
   background:
-    linear-gradient(180deg, transparent 0 31%, #7d8d95 31% 35%, transparent 35% 64%, #7d8d95 64% 68%, transparent 68%),
-    linear-gradient(180deg, #e3e9eb, #c3cfd4);
+    linear-gradient(180deg, transparent 0 30%, #5d6e84 30% 34%, transparent 34% 63%, #5d6e84 63% 67%, transparent 67%),
+    linear-gradient(180deg, #44536a 0 6%, #34414f 6% 100%);
 }
 :root .board.room .tile.wall.seen:not(.fog) {
   box-shadow:
-    0 3px 0 rgba(20, 30, 40, 0.38),
-    inset 0 0 0 2px rgba(232, 71, 95, 0.7);
+    0 3px 0 rgba(10, 16, 24, 0.45),
+    inset 0 0 0 2px rgba(232, 71, 95, 0.85);
 }
+/* on the night layers the blocks get a light rim so they stay readable on the dark floor */
 :root .tier-difficult .board.room .tile.wall:not(.fog),
 :root[data-theme='dark'] .board.room .tile.wall:not(.fog) {
-  background: linear-gradient(180deg, #6e8290 0 60%, #3c4b56 60% 100%);
-  border-color: #9fb3bf;
-}
-:root .tier-difficult .board.room .tile.wall.alt:not(.fog),
-:root[data-theme='dark'] .board.room .tile.wall.alt:not(.fog) {
-  background:
-    linear-gradient(180deg, transparent 0 31%, #22303a 31% 35%, transparent 35% 64%, #22303a 64% 68%, transparent 68%),
-    linear-gradient(180deg, #5d707d, #415360);
+  border-color: #8ea3b8;
 }
 
 /* ---- crew art in the title cards and squad buttons */
@@ -2513,4 +2537,42 @@ html {
 }
 :root.smooth .board.room .guard .cone {
   transition: none;
+}
+
+/* the AP change floats under the AP meter, clear of the "NIGHT · SCORED RUN" label */
+.ap-float {
+  right: 0;
+  top: calc(100% + 2px);
+  margin-right: 0;
+  animation-name: apf-down;
+}
+@keyframes apf-down {
+  to {
+    opacity: 0;
+    translate: 0 10px;
+  }
+}
+
+/* Frame budget for normal mode (measured at 6x CPU throttle while walking): looping animations are
+   restyled every frame under load, so keep only the ones that matter. Robots hold still (only the crew
+   breathes), 4 dust motes instead of 12, and the move highlights glow without pulsing. */
+.board.room .guard .bob {
+  animation: none;
+}
+.layer-bg .dust.d4,
+.layer-bg .dust.d5,
+.layer-bg .dust.d6,
+.layer-bg .dust.d7,
+.layer-bg .dust.d8,
+.layer-bg .dust.d9,
+.layer-bg .dust.d10,
+.layer-bg .dust.d11 {
+  display: none;
+}
+.tile.move::after,
+.tile.target::after {
+  animation: none;
+}
+.ap-float {
+  animation-duration: 0.6s;
 }

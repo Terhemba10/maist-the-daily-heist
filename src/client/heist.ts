@@ -1,4 +1,5 @@
-import { CREW_FIG, figure, ROOM, sprite } from './art/index.ts';
+import { CREW_FIG, figure, sprite } from './art/index.ts';
+import { floorCanvas } from './floor.ts';
 import { audio } from './core/audio.ts';
 import { activeTheme, prefs, savePrefs, smoothActive, type ThemePref } from './prefs.ts';
 import { reducedMotion, saveSettings, settings } from './core/settings.ts';
@@ -1045,8 +1046,8 @@ function buildPlay(): void {
 
   const stage = h('div', 'stage');
   boardEl = h('div', 'board room');
+  boardEl.style.setProperty('--range', String(s.def.range));
   const floor = h('div', 'floor');
-  floor.style.backgroundImage = `url(${ROOM[smoothActive() ? 1 : 0]})`;
   boardEl.append(floor);
   tiles.length = 0;
   opEls.length = 0;
@@ -1069,7 +1070,7 @@ function buildPlay(): void {
     bob.append(figure('guard'));
     hop.append(bob);
     face.append(hop);
-    el.append(h('span', 'cone'), h('span', 'dir'), face, h('span', 'zzz', 'Zzz'));
+    el.append(h('span', 'cone'), h('span', 'ring'), h('span', 'dir'), face, h('span', 'zzz', 'Zzz'));
     el.addEventListener('click', () => onTile(app.s!.guards.find((q) => q.id === g.id)!.x, app.s!.guards.find((q) => q.id === g.id)!.y));
     guardEls.set(g.id, el);
     boardEl.append(el);
@@ -1093,6 +1094,12 @@ function buildPlay(): void {
   });
   stage.append(boardEl);
   bindSwipe(boardEl);
+  // Draw the floor at the board's real size once it is laid out (smaller in Smooth mode).
+  const board = boardEl;
+  requestAnimationFrame(() => {
+    const ratio = smoothActive() ? 1 : Math.min(2, window.devicePixelRatio || 1);
+    floor.append(floorCanvas(app.night * 7 + app.li + 1, board.clientWidth * ratio));
+  });
 
   const panel = h('div', 'panel');
   const cards = h('div', 'op-cards');

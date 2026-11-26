@@ -28,7 +28,6 @@ export function sprite(name: ArtName, cls = ''): HTMLElement {
 
 
 export type { FigureName, View };
-export { ROOM } from './sprites.ts';
 
 /** Crew figures by operative id (0 Vale, 1 Wren, 2 Oto). */
 export const CREW_FIG: readonly FigureName[] = ['vale', 'wren', 'oto'];

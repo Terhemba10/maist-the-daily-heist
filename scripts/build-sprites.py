@@ -7,6 +7,8 @@ Uses only sprite-gen's free, offline tools (no provider is called, nothing is bi
 Then this script groups each sheet's three figures by connected pixels (a grid slice clips props
 such as Vale's scroll that cross the column lines), trims, bakes the shadow under the feet, and
 exports WebP: <name>-<view>.webp (256 px tall) and <name>-<view>-sm.webp (128 px, Smooth mode).
+(room-office.png in the sources is not used: its painted furniture did not match the walls; the floor is
+drawn in code, src/client/floor.ts.)
 The side view faces right; the game mirrors it in CSS for facing left (no extra file).
 
 Usage (with sprite-gen installed in a virtualenv that also has numpy, scipy and Pillow):
@@ -135,10 +137,6 @@ def main() -> None:
                 small = canvas.resize((CANVAS[0] // 2, CANVAS[1] // 2), Image.LANCZOS)
                 small.save(OUT / f"{c}-{view}-sm.webp", "WEBP", quality=QUALITY - 6, method=6)
                 report[f"{c}-{view}"] = {"w": w, "h": h, "feet": [CANVAS[0] // 2, FEET_Y]}
-    # The office floor: layer 1 as drawn; layers 2 and 3 are colour-graded in CSS.
-    room = Image.open(SRC / "room-office.png").convert("RGB")
-    room.resize((640, 640), Image.LANCZOS).save(OUT / "room-office.webp", "WEBP", quality=78, method=6)
-    room.resize((320, 320), Image.LANCZOS).save(OUT / "room-office-sm.webp", "WEBP", quality=72, method=6)
     total = sum(p.stat().st_size for p in OUT.glob("*.webp"))
     (OUT / "sprites.json").write_text(json.dumps({"canvas": CANVAS, "views": report}, indent=1) + "\n")
     print(f"{len(list(OUT.glob('*.webp')))} files, {total / 1024:.0f} KB total in {OUT}")

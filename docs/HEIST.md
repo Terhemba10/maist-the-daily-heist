@@ -22,11 +22,12 @@ A turn-based tactics game played inside a Reddit post, on phone and desktop.
 - White (light) theme by default; Dark and System in Settings.
 - **Smooth mode** (Settings: Auto / On / Off): on automatically on low-end phones (deviceMemory <= 4 or <= 4 CPU cores).
   No background rays, dust or tint, no idle animations, flat tiles, no glows or filters. Same rules and score.
-- **2D art (branch `heist-2d-art`):** semi-realistic crew and robot figures with front / side / back views
-  (side mirrored for left), on an office floor. Sources: `assets/sprites/source/`; rebuild the WebPs with
-  `SPRITE_GEN=… python scripts/build-sprites.py` (sprite-gen `cutout` + `shadow` only, nothing paid).
-  Animation is code: breathing, step bob with squash/stretch, crouch when a guard faces you, ability lean,
-  spotted tip-over, cheer jump, flashlight cones. Shipped art: 172 KB.
+- **2D art:** semi-realistic crew and robot figures with front / side / back views (side mirrored for left),
+  1.7 tiles tall, standing on their tile centre with a coloured ground ring. The floor is drawn in code
+  (`src/client/floor.ts`: wood planks and white tiles, no furniture); walls are navy desk / cabinet blocks.
+  Sources: `assets/sprites/source/`; rebuild the WebPs with `SPRITE_GEN=… python scripts/build-sprites.py`
+  (sprite-gen `cutout` + `shadow` only, nothing paid). Animation is code: breathing, step bob with
+  squash/stretch, crouch when a guard faces you, ability lean, spotted tip-over, cheer jump, flashlight cones.
 - Languages: English, 中文, 日本語, Deutsch, हिन्दी.
 
 Code: `src/shared/heist/engine.ts` (rules, generator, replay, tests in `engine.test.ts`), `src/server/routes/heist.ts`
