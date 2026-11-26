@@ -35,3 +35,5 @@ Code: `src/shared/heist/engine.ts` (rules, generator, replay, tests in `engine.t
 The 3D Maist game is untouched on the `main` branch.
 
 `SEASON_START` (`src/shared/logic/season.ts`) is 2026-11-26, launch day on r/MaistHeist: that is Night 1.
+Live: app v0.0.2 installed on r/MaistHeist (`devvit upload` + `devvit install r/MaistHeist`); Night 1 post:
+https://www.reddit.com/r/MaistHeist/comments/1y6a4ox/ . After code changes, upload again and re-run the install to upgrade.
