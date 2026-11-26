@@ -20,6 +20,8 @@ A turn-based tactics game played inside a Reddit post, on phone and desktop.
 - **Score:** 200 per vault + 100 per AP left + 50 per layer without a Pull + 100 for reaching a slipped vault within 5 moves. One scored run per day; the server replays
   every run to compute the score. Daily leaderboard with Snoovatars, streaks, and "Share to the thread".
 - White (light) theme by default; Dark and System in Settings.
+- **Smooth mode** (Settings: Auto / On / Off): on automatically on low-end phones (deviceMemory <= 4 or <= 4 CPU cores).
+  No background rays, dust or tint, no idle animations, flat tiles, no glows or filters. Same rules and score.
 - Languages: English, 中文, 日本語, Deutsch, हिन्दी.
 
 Code: `src/shared/heist/engine.ts` (rules, generator, replay, tests in `engine.test.ts`), `src/server/routes/heist.ts`

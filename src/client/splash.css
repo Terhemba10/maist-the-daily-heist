@@ -257,3 +257,14 @@ body {
   color: #ffffff;
   box-shadow: none;
 }
+
+/* Smooth mode (low-end phones): no idle loops or filters on the feed card. */
+:root.smooth .scene *,
+:root.smooth .scene *::before,
+:root.smooth .scene *::after {
+  animation: none !important;
+  filter: none !important;
+}
+html {
+  touch-action: manipulation;
+}

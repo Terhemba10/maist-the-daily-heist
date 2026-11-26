@@ -1,6 +1,6 @@
 import { CREW_ART, sprite } from './art/index.ts';
 import { audio } from './core/audio.ts';
-import { activeTheme, prefs, savePrefs, type ThemePref } from './prefs.ts';
+import { activeTheme, prefs, savePrefs, smoothActive, type ThemePref } from './prefs.ts';
 import { reducedMotion, saveSettings, settings } from './core/settings.ts';
 import { getLang, LANGS, setLang, t, type Key, type Lang } from './i18n/heist.ts';
 import type { BoardRes, GhostRes, HeistInit, KickRes, LimboRes, RunRes, ShareRes } from '../shared/heist/api.ts';
@@ -241,6 +241,7 @@ function showSettings(): void {
     t('ghostRaceDesc')
   );
   row(t('bigText'), seg(['on', 'off'] as const, (v) => t(v), () => (prefs.bigText ? 'on' : 'off'), (v) => savePrefs({ bigText: v === 'on' })));
+  row(t('smooth'), seg(['auto', 'on', 'off'] as const, (v) => t(v), () => prefs.smooth, (v) => savePrefs({ smooth: v })));
   modal(t('settings'), body);
 }
 
@@ -681,17 +682,29 @@ function celebration(): HTMLElement {
 }
 
 /** Restart a one-shot CSS animation class. */
-function retrigger(el: HTMLElement | undefined, cls: string): void {
-  if (!el) return;
-  el.classList.remove(cls);
-  void el.offsetWidth;
-  el.classList.add(cls);
+/**
+ * One-shot effects run on the Web Animations API: restarting a CSS animation needs a forced reflow
+ * per sprite, which made every move janky on slow phones.
+ */
+const FX: Record<string, { sel: string; frames: Keyframe[]; ms: number }[]> = {
+  go: [{ sel: '', frames: [{ translate: '0 0' }, { translate: '0 -18%', offset: 0.45 }, { translate: '0 0' }], ms: 220 }],
+  cast: [
+    { sel: '.fx', frames: [{ opacity: 0.9, scale: 0.4 }, { opacity: 0, scale: 1.3 }], ms: 550 },
+    { sel: '.face', frames: [{ scale: 1 }, { scale: 1.25, offset: 0.4 }, { scale: 1 }], ms: 450 },
+  ],
+};
+function retrigger(el: HTMLElement | undefined, cls: keyof typeof FX): void {
+  if (!el || reducedMotion()) return;
+  for (const f of FX[cls] ?? []) {
+    const target = f.sel ? el.querySelector<HTMLElement>(f.sel) : el;
+    target?.animate(f.frames, { duration: f.ms, easing: 'ease-out' });
+  }
 }
 
 /** Float "−1 AP" (or "+6 AP" after a Pull) next to the AP number. */
 function apFloat(delta: number): void {
   const host = document.querySelector('.ap');
-  if (!host || delta === 0) return;
+  if (!host || delta === 0 || smoothActive()) return; // the AP number itself still updates
   const f = h('span', `ap-float${delta > 0 ? ' up' : ''}`, `${delta > 0 ? '+' : '−'}${Math.abs(delta)} ${t('ap')}`);
   host.append(f);
   window.setTimeout(() => f.remove(), 900);
@@ -781,13 +794,13 @@ function wakeFromIdle(): void {
   boardEl?.classList.remove('idle');
   window.clearTimeout(app.idleTimer);
   app.idleTimer = window.setTimeout(() => {
-    if (app.mode === 'play' && !document.querySelector('.modal-back')) boardEl?.classList.add('idle');
+    if (app.mode === 'play' && !smoothActive() && !document.querySelector('.modal-back')) boardEl?.classList.add('idle');
   }, 5000);
 }
 
 /** A small puff of dust where a crew member just stepped off. */
 function puff(x: number, y: number): void {
-  if (!boardEl) return;
+  if (!boardEl || smoothActive()) return; // no dust in Smooth mode
   const p = h('span', 'puff');
   p.style.transform = `translate(calc(var(--cell) * ${x}), calc(var(--cell) * ${y}))`;
   boardEl.append(p);
@@ -869,6 +882,7 @@ function place(el: HTMLElement, x: number, y: number, isGuard: boolean): void {
     if (!isGuard && !el.classList.contains('ghost') && el.dataset.x !== undefined) puff(px, py);
     retrigger(el.querySelector<HTMLElement>('.hop') ?? undefined, 'go');
   }
+  if (el.dataset.x === String(x) && el.dataset.y === String(y)) return;
   el.dataset.x = String(x);
   el.dataset.y = String(y);
   el.style.transform = `translate(calc(var(--cell) * ${x}), calc(var(--cell) * ${y}))`;
@@ -903,6 +917,11 @@ function moveTargets(s: LayerState): Map<number, Action> {
   return m;
 }
 
+/** Write text only when it changes: every write dirties layout, and renderPlay runs on each move. */
+function setText(el: HTMLElement | null, text: string): void {
+  if (el && el.textContent !== text) el.textContent = text;
+}
+
 function renderPlay(fresh: boolean): void {
   const s = app.s;
   if (!s) return;
@@ -918,7 +937,8 @@ function renderPlay(fresh: boolean): void {
     const el = tiles[i]!;
     const tile = s.grid[i];
     const hidden = vis !== null && !vis.has(i);
-    el.className = `tile${(i % SIZE) % 2 === Math.floor(i / SIZE) % 2 ? '' : ' alt'}${tile === 1 ? ' wall' : ''}${tile === 2 ? ' vault' : ''}${!hidden && seen.has(i) ? ' seen' : ''}${targets.has(i) ? (app.targeting ? ' target' : ' move') : ''}${hidden ? ' fog' : ''}`;
+    const cls = `tile${(i % SIZE) % 2 === Math.floor(i / SIZE) % 2 ? '' : ' alt'}${tile === 1 ? ' wall' : ''}${tile === 2 ? ' vault' : ''}${!hidden && seen.has(i) ? ' seen' : ''}${targets.has(i) ? (app.targeting ? ' target' : ' move') : ''}${hidden ? ' fog' : ''}`;
+    if (el.className !== cls) el.className = cls; // only touch tiles that changed
   }
   s.ops.forEach((o, i) => {
     const el = opEls[i]!;
@@ -940,12 +960,12 @@ function renderPlay(fresh: boolean): void {
   }
   // HUD
   const ap = document.querySelector<HTMLElement>('.ap-num');
-  if (ap) ap.textContent = String(s.ap);
+  setText(ap, String(s.ap));
   if (!fresh) apFloat(s.ap - app.lastAp);
   app.lastAp = s.ap;
   if (s.status === 'cleared') document.querySelector('.tile.vault .art')?.classList.add('open');
   const bar = document.querySelector<HTMLElement>('.ap-fill');
-  if (bar) bar.style.width = `${Math.min(100, (s.ap / s.def.ap) * 100)}%`;
+  if (bar) bar.style.scale = `${Math.min(1, s.ap / s.def.ap)} 1`;
   document.querySelector('.hud')?.classList.toggle('low', s.ap <= 3);
   document.querySelectorAll<HTMLElement>('.op-card').forEach((c, i) => {
     const o = s.ops[i];
@@ -955,14 +975,14 @@ function renderPlay(fresh: boolean): void {
   const ab = document.querySelector<HTMLElement>('.ability-btn');
   if (ab) {
     const spec = SQUAD[app.sel];
-    ab.textContent = app.targeting ? t('cancel') : `${t(spec.ability)} · ${spec.cost} AP`;
+    setText(ab, app.targeting ? t('cancel') : `${t(spec.ability)} · ${spec.cost} AP`);
     ab.title = t(`${spec.ability}Desc` as Key);
     ab.classList.toggle('on', app.targeting);
   }
   const hint = document.querySelector<HTMLElement>('.hint');
   if (hint) {
     const spec = SQUAD[app.sel];
-    hint.textContent = app.targeting ? (spec.ability === 'fold' ? t('pickWall') : t('pickGuard')) : s.def.fog ? t('fog') : t(`${spec.ability}Desc` as Key);
+    setText(hint, app.targeting ? (spec.ability === 'fold' ? t('pickWall') : t('pickGuard')) : s.def.fog ? t('fog') : t(`${spec.ability}Desc` as Key));
   }
 }
 
