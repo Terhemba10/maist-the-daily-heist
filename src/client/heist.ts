@@ -1,10 +1,11 @@
 import { CREW_FIG, figure, sprite } from './art/index.ts';
 import { floorCanvas } from './floor.ts';
 import { audio } from './core/audio.ts';
-import { activeTheme, prefs, savePrefs, smoothActive, type ThemePref } from './prefs.ts';
+import { prefs, savePrefs, smoothActive, type ThemePref } from './prefs.ts';
 import { reducedMotion, saveSettings, settings } from './core/settings.ts';
 import { getLang, LANGS, setLang, t, type Key, type Lang } from './i18n/heist.ts';
-import type { BoardRes, GhostRes, HeistInit, KickRes, LimboRes, RunRes, ShareRes } from '../shared/heist/api.ts';
+import type { BoardRes, GhostRes, HeistInit, JoinRes, KickRes, LimboRes, RunRes, ShareRes } from '../shared/heist/api.ts';
+import { navigateTo } from '@devvit/web/client';
 import {
   apply,
   buildHeist,
@@ -167,38 +168,11 @@ function topBar(): HTMLElement {
   if (!app.init?.username) who.append(h('span', '', 'MAIST'));
   if (app.init?.streak.count) who.append(h('span', 'streak', t('streak', { n: app.init.streak.count })));
   const tools = h('div', 'tools chip');
-  const sel = h('select', 'lang');
-  sel.setAttribute('aria-label', t('language'));
-  for (const [code, label] of Object.entries(LANGS)) {
-    const o = h('option', '', label);
-    o.value = code;
-    if (code === getLang()) o.selected = true;
-    sel.append(o);
-  }
-  sel.addEventListener('change', () => {
-    setLang(sel.value as Lang);
-    render();
-  });
-  const snd = h('button', 'icon', settings.sfx > 0 ? '🔊' : '🔇');
-  snd.setAttribute('aria-label', t('sound'));
-  snd.addEventListener('click', () => {
-    const on = settings.sfx === 0;
-    saveSettings({ sfx: on ? 0.8 : 0, music: on ? 0.6 : 0 });
-    audio.applyVolumes();
-    snd.textContent = on ? '🔊' : '🔇';
-  });
-  const theme = h('button', 'icon', activeTheme() === 'light' ? '☀️' : '🌙');
-  theme.setAttribute('aria-label', t('theme'));
-  theme.title = t('theme');
-  theme.addEventListener('click', () => {
-    savePrefs({ theme: activeTheme() === 'light' ? 'dark' : 'light' });
-    theme.textContent = activeTheme() === 'light' ? '☀️' : '🌙';
-  });
   const gear = h('button', 'icon', '⚙');
   gear.setAttribute('aria-label', t('settings'));
   gear.title = t('settings');
   gear.addEventListener('click', showSettings);
-  tools.append(sel, snd, theme, gear);
+  tools.append(gear);
   bar.append(who, tools);
   return bar;
 }
@@ -232,6 +206,28 @@ function showSettings(): void {
     r.append(l, control);
     body.append(r);
   };
+  const sel = h('select', 'lang');
+  sel.setAttribute('aria-label', t('language'));
+  for (const [code, label] of Object.entries(LANGS)) {
+    const o = h('option', '', label);
+    o.value = code;
+    if (code === getLang()) o.selected = true;
+    sel.append(o);
+  }
+  sel.addEventListener('change', () => {
+    setLang(sel.value as Lang);
+    closeModal();
+    render();
+    showSettings();
+  });
+  row(t('language'), sel);
+  row(
+    t('sound'),
+    seg(['on', 'off'] as const, (v) => t(v), () => (settings.sfx > 0 ? 'on' : 'off'), (v) => {
+      saveSettings({ sfx: v === 'on' ? 0.8 : 0, music: v === 'on' ? 0.6 : 0 });
+      audio.applyVolumes();
+    })
+  );
   row(t('theme'), seg(['system', 'light', 'dark'] as const, (v: ThemePref) => t(v === 'system' ? 'themeSystem' : v === 'light' ? 'themeLight' : 'themeDark'), () => prefs.theme, (v) => savePrefs({ theme: v })));
   row(
     t('ghostRace'),
@@ -273,19 +269,23 @@ function renderTitle(): void {
   const actions = h('div', 'actions');
   if (canScore()) {
     const saved = loadProgress();
-    const go = h('button', 'btn primary', saved?.some((l) => l.length) ? t('resume') : t('start'));
+    const go = h('button', 'btn primary big', saved?.some((l) => l.length) ? t('resume') : t('start'));
     go.addEventListener('click', () => startRun(true, saved));
     actions.append(go);
   }
-  const prac = h('button', canScore() ? 'btn' : 'btn primary', t('practice'));
+  // When there is no scored run to start (logged out, already played, an older night),
+  // practice becomes the one big button; otherwise it is a quiet link under "Start".
+  const prac = h('button', canScore() ? 'link' : 'btn primary big', t('practice'));
   prac.addEventListener('click', () => startRun(false, null));
   const row = h('div', 'links');
   const lb = h('button', 'link', t('board'));
   lb.addEventListener('click', () => void showBoard());
   const how = h('button', 'link', t('howto'));
   how.addEventListener('click', showHowTo);
+  if (canScore()) row.append(prac);
   row.append(lb, how);
-  actions.append(prac, row);
+  if (!canScore()) actions.append(prac);
+  actions.append(row);
   const cd = h('p', 'countdown', t('next', { t: fmtCountdown() }));
   wrap.append(hero, status, actions, cd);
   ui.append(wrap);
@@ -297,14 +297,14 @@ function seasonStrip(): HTMLElement {
   wrap.append(h('p', 'season-title', t('yourNights')));
   const row = h('div', 'season-row');
   const today = app.init?.today ?? app.night;
-  const past = app.init?.history?.length ? app.init.history : [{ night: today, score: null }];
+  const past = (app.init?.history?.length ? app.init.history : [{ night: today, score: null }]).slice(-3);
   for (const d of past) {
     const tile = h('div', `night-tile${d.night === today ? ' now' : ''}${d.score === null ? ' empty' : ''}`);
     tile.append(h('b', '', d.night === today ? t('tonight') : t('night', { n: d.night })), h('span', '', d.score === null ? t('notPlayed') : t('pts', { score: d.score })));
     row.append(tile);
   }
   const hours = Math.max(1, Math.ceil((app.nextAt - Date.now()) / 3_600_000));
-  for (let k = 1; k <= 3; k++) {
+  for (let k = 1; k <= 1; k++) {
     const tile = h('div', 'night-tile locked');
     tile.append(h('b', '', `🔒 ${t('night', { n: today + k })}`), h('span', '', t('unlocksIn', { h: hours + 24 * (k - 1) })));
     row.append(tile);
@@ -635,26 +635,58 @@ async function finish(): Promise<void> {
     layers.append(row);
   });
   box.append(layers);
+  const streak = app.init?.streak.count ?? 0;
+  if (res?.scored && streak > 0) box.append(h('p', 'streak-line', t('streakNights', { n: streak })));
   const acts = h('div', 'actions');
+  acts.append(joinButton());
+  const row = h('div', 'links');
   if (res?.scored) {
-    const share = h('button', 'btn primary', t('share'));
+    const share = h('button', 'link', t('share'));
     share.addEventListener('click', async () => {
       share.setAttribute('disabled', '');
       const r = await call<ShareRes>('share', {});
       toast(r?.message ?? t('blocked'));
     });
-    acts.append(share);
+    row.append(share);
   }
-  const lb = h('button', 'btn', t('board'));
+  const lb = h('button', 'link', t('board'));
   lb.addEventListener('click', () => void showBoard());
-  const back = h('button', 'btn', t('backTitle'));
+  const back = h('button', 'link', t('backTitle'));
   back.addEventListener('click', () => {
     app.mode = 'title';
     audio.stopMusic();
     render();
   });
-  acts.append(lb, back);
+  row.append(lb, back);
+  acts.append(row);
   box.append(acts);
+}
+
+/**
+ * The one next step after a run: join the subreddit for tomorrow's heist. Logged-in players are
+ * subscribed by the app (as themselves); logged-out players are sent to the subreddit to join there.
+ */
+function joinButton(): HTMLElement {
+  const sub = app.init?.subreddit || 'MaistHeist';
+  if (app.init?.joined) return h('p', 'joined', t('joinedSub', { sub }));
+  const b = h('button', 'btn primary big', t('joinSub', { sub }));
+  b.addEventListener('click', async () => {
+    if (!app.init?.loggedIn) {
+      navigateTo(`https://www.reddit.com/r/${sub}/`);
+      return;
+    }
+    b.setAttribute('disabled', '');
+    const r = await call<JoinRes>('join', {});
+    if (r?.ok) {
+      if (app.init) app.init.joined = true;
+      b.replaceWith(h('p', 'joined', t('joinedSub', { sub })));
+      audio.drop();
+    } else {
+      b.removeAttribute('disabled');
+      toast(r?.message ?? t('blocked'));
+    }
+  });
+  return b;
 }
 
 function localResults() {
@@ -671,11 +703,12 @@ function localResults() {
 /** Crew around a spinning vault, with twinkling sparks. */
 function celebration(): HTMLElement {
   const box = h('div', 'celebrate');
-  box.append(sprite('vault', 'c-vault open'));
+  // crew, vault, crew, crew: the vault stands among them
   CREW_FIG.forEach((name, i) => {
     const b = h('span', `c-crew c-crew${i} bob cheer`);
     b.append(figure(name, ['front']));
     box.append(b);
+    if (i === 0) box.append(sprite('vault', 'c-vault open'));
   });
   ['#ffd166', '#00f0ff', '#b388ff', '#7cffb2', '#ff2e88'].forEach((c, i) => {
     const sp = h('span', `spark s${i}`, '✦');

@@ -2592,3 +2592,195 @@ html {
 .board.room .op.ghost .face {
   filter: none;
 }
+
+/* ================================================= final layout: start and end screens fit the viewport
+   (phone 360x640 up to 1920x1080) with no scrolling. Sizes follow the viewport height. */
+.title-screen,
+.results {
+  height: 100%;
+  min-height: 0;
+  justify-content: space-between;
+  padding-bottom: max(10px, 2vh);
+  overflow: hidden;
+}
+.title-screen .hero {
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(4px, 1.2vh, 14px);
+  min-height: 0;
+}
+.title-screen .logo {
+  font-size: clamp(30px, 6.2vh, 64px);
+  margin: 0;
+}
+.title-screen .tag {
+  margin: 0;
+  font-size: calc(14px * var(--fs, 1));
+}
+.title-screen .squad-row {
+  gap: 8px;
+}
+.title-screen .crew {
+  padding: 6px 10px;
+}
+.title-screen .crew .bob {
+  width: clamp(44px, 9vh, 96px);
+  height: clamp(64px, 13vh, 138px);
+}
+.title-screen .crew b {
+  margin-top: 2px;
+}
+/* compact season strip: one row of four (the last two nights, tonight, the next one) */
+.season {
+  margin-top: 0;
+}
+.season-title {
+  margin-bottom: 4px;
+}
+.season-row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-width: min(440px, 94vw);
+  gap: 4px;
+}
+.night-tile {
+  padding: 4px 2px;
+}
+/* one big start button; practice, leaderboard and how-to as quiet links on one line */
+.btn.big {
+  font-size: calc(18px * var(--fs, 1));
+  min-height: 52px;
+}
+.title-screen .actions,
+.results .actions {
+  gap: 6px;
+}
+.links {
+  gap: 4px 14px;
+  flex-wrap: wrap;
+}
+.links .link {
+  white-space: nowrap;
+  min-height: 44px;
+  padding: 0 4px;
+}
+.title-screen .countdown {
+  margin: 0;
+}
+
+/* end screen: a smaller celebration, the score, compact layer rows, then the next step */
+.results .logo.small {
+  margin: 0;
+  font-size: clamp(26px, 5vh, 48px);
+}
+.results .celebrate {
+  height: clamp(84px, 17vh, 190px);
+  margin: 0 auto;
+}
+.results .celebrate .c-vault {
+  width: clamp(54px, 10vh, 110px);
+  height: clamp(54px, 10vh, 110px);
+}
+.results .celebrate .c-crew {
+  height: 100%;
+  width: auto;
+  aspect-ratio: 176 / 256;
+}
+.results .res-box {
+  gap: clamp(4px, 1vh, 10px);
+}
+.results .score {
+  font-size: clamp(34px, 7vh, 64px);
+  margin: 0;
+  line-height: 1.05;
+}
+.results .rank {
+  margin: 0;
+}
+.results .res-layers {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+.results .res-row {
+  padding: 6px 12px;
+  min-height: 0;
+}
+.results .res-row .res-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 8px;
+  text-align: left;
+}
+.results .res-row small {
+  margin: 0;
+}
+.streak-line {
+  margin: 0;
+  font-weight: 700;
+  color: var(--vault);
+}
+.joined {
+  margin: 0;
+  font-weight: 700;
+  color: var(--line);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+/* very short screens (phones in a feed-sized frame): drop the decorative extras first */
+@media (max-height: 600px) {
+  .title-screen .tag,
+  .season-title,
+  .results .celebrate {
+    display: none;
+  }
+}
+.title-screen .logo {
+  font-size: min(clamp(30px, 6.2vh, 64px), 10.5vw);
+  white-space: nowrap;
+}
+.season-row {
+  display: flex;
+  justify-content: center;
+}
+.season {
+  width: min(440px, 94vw);
+}
+.season-row .night-tile {
+  flex: 1 1 0;
+  max-width: 25%;
+}
+/* the celebration is a simple row: crew, vault, crew, crew, standing on one line */
+.results .celebrate {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2%;
+  width: min(360px, 92vw);
+}
+.results .celebrate .c-crew,
+.results .celebrate .c-vault {
+  position: static;
+  translate: none;
+  transform: none;
+  left: auto;
+  top: auto;
+}
+.results .celebrate .c-vault {
+  display: block;
+  flex: none;
+  align-self: center;
+}
+.results .celebrate .c-crew {
+  flex: none;
+}
+.results .celebrate .spark {
+  display: none;
+}
+.results .res-row b {
+  white-space: nowrap;
+}

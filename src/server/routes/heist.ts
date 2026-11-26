@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Context as HonoContext } from 'hono';
 import { context, reddit, redis } from '@devvit/web/server';
-import type { BoardRes, BoardRow, GhostRes, HeistInit, KickRes, LimboReq, LimboRes, RunReq, RunRes, ShareRes, Streak } from '../../shared/heist/api';
+import type { BoardRes, BoardRow, GhostRes, HeistInit, JoinRes, KickRes, LimboReq, LimboRes, RunReq, RunRes, ShareRes, Streak } from '../../shared/heist/api';
 import { buildHeist, isRecord, replay, totalScore, type LayerResult } from '../../shared/heist/engine';
 import { msUntilNextDream, nightFor } from '../../shared/logic/season';
 import { HK, HTTL } from '../core/heistKeys';
@@ -59,7 +59,9 @@ heist.get('/init', async (c) => {
   let streak: Streak = { count: 0, best: 0, lastNight: 0 };
   let kicks: KickRes = { granted: 0, asked: false };
   const history: HeistInit['history'] = [];
+  let joined = false;
   if (userId) {
+    joined = (await redis.hGet(HK.user(userId), 'joined')) === '1';
     for (let n = Math.max(1, t - 2); n <= t; n++) {
       const v = await redis.get(HK.scored(n, userId));
       history.push({ night: n, score: v ? Number(v) : null });
@@ -83,7 +85,26 @@ heist.get('/init', async (c) => {
     crews: await redis.zCard(HK.board(postNight())),
     history,
     nextMs: msUntilNextDream(),
+    subreddit: context.subredditName ?? '',
+    joined,
   });
+});
+
+// ---------------------------------------------------------------- join the subreddit
+
+/** "Join r/… for tomorrow's heist": subscribes the player (as themselves) to this subreddit. */
+heist.post('/join', async (c) => {
+  const { userId } = context;
+  if (!userId) return c.json<JoinRes>({ ok: false, message: 'Log in to Reddit to join.' });
+  try {
+    await reddit.subscribeToCurrentSubreddit();
+    await redis.hSet(HK.user(userId), { joined: '1' });
+    await redis.expire(HK.user(userId), HTTL.user);
+    return c.json<JoinRes>({ ok: true });
+  } catch (e) {
+    console.error('join failed', e);
+    return c.json<JoinRes>({ ok: false, message: 'Could not join right now.' });
+  }
 });
 
 // ---------------------------------------------------------------- runs

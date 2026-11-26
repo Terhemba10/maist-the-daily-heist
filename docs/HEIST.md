@@ -29,6 +29,8 @@ A turn-based tactics game played inside a Reddit post, on phone and desktop.
   Sources: `assets/sprites/source/`; rebuild the WebPs with `SPRITE_GEN=… python scripts/build-sprites.py`
   (sprite-gen `cutout` + `shadow` only, nothing paid). Animation is code: breathing, step bob with
   squash/stretch, crouch when a guard faces you, ability lean, spotted tip-over, cheer jump, flashlight cones.
+- **End screen:** score, rank, streak, then one next step: **Join r/<subreddit> for tomorrow's heist**
+  (subscribes the player through Devvit, `SUBSCRIBE_TO_SUBREDDIT` as user; logged-out players get a link).
 - Languages: English, 中文, 日本語, Deutsch, हिन्दी.
 
 Code: `src/shared/heist/engine.ts` (rules, generator, replay, tests in `engine.test.ts`), `src/server/routes/heist.ts`

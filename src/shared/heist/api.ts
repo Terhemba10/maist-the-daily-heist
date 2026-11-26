@@ -21,7 +21,13 @@ export type HeistInit = {
   /** Your scores on the last 3 nights up to tonight (null = not played). */
   history: { night: number; score: number | null }[];
   nextMs: number;
+  /** The subreddit this post lives in (for "Join r/… for tomorrow's heist"). */
+  subreddit: string;
+  /** This player already joined the subreddit from the game. */
+  joined: boolean;
 };
+
+export type JoinRes = { ok: boolean; message?: string };
 
 export type RunReq = { night: number; record: RunRecord; scored: boolean };
 export type RunRes = { type: 'run'; scored: boolean; score: number; results: LayerResult[]; rank: number | null; streak: Streak; reason?: string };

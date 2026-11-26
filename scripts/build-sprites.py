@@ -100,9 +100,44 @@ def figures(cut: Image.Image) -> list[Image.Image]:
             mine = np.isin(l2, [i + 1 for i in range(n2) if s2[i] >= 150])
         p = px.copy()
         p[~mine] = 0
-        im = Image.fromarray(p)
+        im = Image.fromarray(defringe(p))
         out.append(im.crop(im.getbbox()))
     return out
+
+
+def defringe(p: np.ndarray, passes: int = 2) -> np.ndarray:
+    """
+    Remove the white halo the sheet's background leaves on outer edges (strongest next to glowing
+    props): near-white, unsaturated pixels within 2 px of transparency become transparent. Real white
+    areas (Oto's lab coat) sit inside a dark outline, so they are never on the edge band; saturated glow
+    colours (cyan scroll, green flask, yellow torch) are kept.
+    """
+    p = p.copy()
+    eight = np.ones((3, 3))
+    # Holes: background white trapped in enclosed gaps (between an arm and the body) that the cutout's
+    # flood fill cannot reach. The sheet's background is flat, pure white; drawn whites are shaded.
+    rgb = p[:, :, :3].astype(int)
+    lo = rgb.min(axis=2)
+    hi = rgb.max(axis=2)
+    pure = (lo > 240) & (hi - lo < 12) & (p[:, :, 3] > 0)
+    lab, n = ndimage.label(pure, structure=eight)
+    if n:
+        idx = range(1, n + 1)
+        area = ndimage.sum(pure, lab, index=idx)
+        mean_lo = ndimage.mean(lo, lab, index=idx)
+        holes = [i + 1 for i in range(n) if area[i] >= 20 and mean_lo[i] >= 247]
+        p[np.isin(lab, holes), 3] = 0
+    for _ in range(passes):
+        a = p[:, :, 3]
+        clear = a < 40
+        band = ndimage.binary_dilation(clear, structure=eight, iterations=2) & ~clear
+        rgb = p[:, :, :3].astype(int)
+        lo = rgb.min(axis=2)
+        hi = rgb.max(axis=2)
+        whiteish = (lo > 205) & (hi - lo < 40)
+        kill = band & whiteish
+        p[kill, 3] = 0
+    return p
 
 
 def main() -> None:
