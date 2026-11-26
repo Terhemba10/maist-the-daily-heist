@@ -268,3 +268,47 @@ body {
 html {
   touch-action: manipulation;
 }
+
+/* ---- 2D figures (full-body, 176x256 canvases with the feet near the bottom) */
+.scene .a .pic,
+.scene .a .pic img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.scene .a .pic img {
+  object-fit: contain;
+  object-position: 50% 100%;
+}
+.scene .oto,
+.scene .wren,
+.scene .vale,
+.scene .guard {
+  top: auto;
+  bottom: 9%;
+  width: 18%;
+  aspect-ratio: 176 / 256;
+}
+.scene .oto {
+  left: 3%;
+}
+.scene .wren {
+  left: 15%;
+}
+.scene .vale {
+  left: 28%;
+}
+.scene .guard {
+  left: 55%;
+  width: 19%;
+}
+/* the sleeping bot slumps a little */
+.scene .guard .pic {
+  rotate: 4deg;
+  transform-origin: 50% 95%;
+}
+/* the Zzz floats over the sleeping bot */
+.scene .zzz {
+  left: 66%;
+  top: 30%;
+}

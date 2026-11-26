@@ -1,4 +1,4 @@
-import { CREW_ART, sprite } from './art/index.ts';
+import { CREW_FIG, figure, ROOM, sprite } from './art/index.ts';
 import { audio } from './core/audio.ts';
 import { activeTheme, prefs, savePrefs, smoothActive, type ThemePref } from './prefs.ts';
 import { reducedMotion, saveSettings, settings } from './core/settings.ts';
@@ -256,7 +256,7 @@ function renderTitle(): void {
   SQUAD.forEach((sq, i) => {
     const c = h('div', `crew c${i}`);
     const pic = h('span', 'bob');
-    pic.append(sprite(CREW_ART[i] ?? 'vale', 'blink'));
+    pic.append(figure(CREW_FIG[i] ?? 'vale', ['front']));
     c.append(pic, h('b', '', shortName(i)), h('small', '', `${t(sq.ability)} · ${sq.cost} AP`));
     squad.append(c);
   });
@@ -500,6 +500,9 @@ function showCleared(): void {
   body.append(vault, h('p', '', t('clearedSub', { pts, ap: s.ap })));
   if (s.quick) body.append(h('p', 'slip-bonus', t('slipBonus', { pts: SLIP_BONUS })));
   document.querySelector('.tile.vault .art')?.classList.add('open');
+  opEls.forEach((el) => {
+    if (!el.classList.contains('out')) el.classList.add('cheer');
+  });
   const last = app.li >= 2;
   const next = h('button', 'btn primary', last ? t('finish') : t('nextLayer', { i: app.li + 2 }));
   next.addEventListener('click', () => {
@@ -668,9 +671,9 @@ function localResults() {
 function celebration(): HTMLElement {
   const box = h('div', 'celebrate');
   box.append(sprite('vault', 'c-vault open'));
-  CREW_ART.forEach((name, i) => {
-    const b = h('span', `c-crew c-crew${i} bob`);
-    b.append(sprite(name, 'blink'));
+  CREW_FIG.forEach((name, i) => {
+    const b = h('span', `c-crew c-crew${i} bob cheer`);
+    b.append(figure(name, ['front']));
     box.append(b);
   });
   ['#ffd166', '#00f0ff', '#b388ff', '#7cffb2', '#ff2e88'].forEach((c, i) => {
@@ -687,10 +690,21 @@ function celebration(): HTMLElement {
  * per sprite, which made every move janky on slow phones.
  */
 const FX: Record<string, { sel: string; frames: Keyframe[]; ms: number }[]> = {
-  go: [{ sel: '', frames: [{ translate: '0 0' }, { translate: '0 -18%', offset: 0.45 }, { translate: '0 0' }], ms: 220 }],
+  go: [
+    {
+      sel: '',
+      frames: [
+        { translate: '0 0', scale: '1 1' },
+        { translate: '0 -12%', scale: '0.94 1.06', offset: 0.4 },
+        { translate: '0 0', scale: '1.08 0.92', offset: 0.8 },
+        { translate: '0 0', scale: '1 1' },
+      ],
+      ms: 240,
+    },
+  ],
   cast: [
     { sel: '.fx', frames: [{ opacity: 0.9, scale: 0.4 }, { opacity: 0, scale: 1.3 }], ms: 550 },
-    { sel: '.face', frames: [{ scale: 1 }, { scale: 1.25, offset: 0.4 }, { scale: 1 }], ms: 450 },
+    { sel: '.bob', frames: [{ rotate: '0deg', scale: '1' }, { rotate: '-9deg', scale: '1.08', offset: 0.35 }, { rotate: '0deg', scale: '1' }], ms: 500 },
   ],
 };
 function retrigger(el: HTMLElement | undefined, cls: keyof typeof FX): void {
@@ -761,10 +775,11 @@ function renderGhost(): void {
   }
   if (!ghostEls.length || !boardEl?.contains(ghostEls[0] ?? null)) {
     ghostEls.length = 0;
-    CREW_ART.forEach((name, i) => {
+    CREW_FIG.forEach((name, i) => {
       const el = h('div', `op ghost c${i}`);
+      el.dataset.view = 'front';
       const face = h('span', 'face');
-      face.append(sprite(name));
+      face.append(figure(name));
       el.append(face);
       ghostEls.push(el);
       boardEl!.append(el);
@@ -879,6 +894,8 @@ function place(el: HTMLElement, x: number, y: number, isGuard: boolean): void {
   const py = Number(el.dataset.y ?? y);
   if (px !== x || py !== y) {
     if (!isGuard && x !== px) el.dataset.face = x < px ? 'l' : 'r';
+    // front = walking down, back = walking up, side = left/right (mirrored for left)
+    if (!isGuard && el.dataset.x !== undefined) el.dataset.view = y > py ? 'front' : y < py ? 'back' : 'side';
     if (!isGuard && !el.classList.contains('ghost') && el.dataset.x !== undefined) puff(px, py);
     retrigger(el.querySelector<HTMLElement>('.hop') ?? undefined, 'go');
   }
@@ -886,6 +903,7 @@ function place(el: HTMLElement, x: number, y: number, isGuard: boolean): void {
   el.dataset.x = String(x);
   el.dataset.y = String(y);
   el.style.transform = `translate(calc(var(--cell) * ${x}), calc(var(--cell) * ${y}))`;
+  el.style.zIndex = String(10 + y * 2 + (isGuard ? 0 : 1)); // lower rows stand in front
 }
 
 function moveTargets(s: LayerState): Map<number, Action> {
@@ -922,6 +940,19 @@ function setText(el: HTMLElement | null, text: string): void {
   if (el && el.textContent !== text) el.textContent = text;
 }
 
+/** A guard looks along this op's row or column, towards it, within its range + 2 tiles. */
+function facedByGuard(s: LayerState, x: number, y: number, vis: Set<number> | null): boolean {
+  return s.guards.some((g) => {
+    if (g.stunned > 0 || (vis && !vis.has(idx(g.x, g.y)))) return false;
+    const [dx, dy] = DIRS[g.facing];
+    const ax = x - g.x;
+    const ay = y - g.y;
+    const along = dx !== 0 ? ax * dx : ay * dy;
+    const across = dx !== 0 ? ay : ax;
+    return across === 0 && along > 0 && along <= s.def.range + 2;
+  });
+}
+
 function renderPlay(fresh: boolean): void {
   const s = app.s;
   if (!s) return;
@@ -948,12 +979,14 @@ function renderPlay(fresh: boolean): void {
     if (s.lastCaught.includes(i)) el.classList.add('spotted');
     else if (!o.out) el.classList.remove('spotted');
     el.classList.toggle('out', o.out);
+    el.classList.toggle('crouch', !o.out && facedByGuard(s, o.x, o.y, vis));
   });
   for (const g of s.guards) {
     const el = guardEls.get(g.id);
     if (!el) continue;
     place(el, g.x, g.y, true);
     el.dataset.facing = g.facing;
+    el.style.setProperty('--sight', String(Math.max(0, guardVision(s, g, s.def.range).length - 1)));
     el.classList.toggle('stunned', g.stunned > 0);
     el.classList.toggle('hidden', !!vis && !vis.has(idx(g.x, g.y)));
     el.classList.toggle('watcher', g.kind === 'watcher');
@@ -1011,7 +1044,10 @@ function buildPlay(): void {
   hud.append(left, apBox);
 
   const stage = h('div', 'stage');
-  boardEl = h('div', 'board');
+  boardEl = h('div', 'board room');
+  const floor = h('div', 'floor');
+  floor.style.backgroundImage = `url(${ROOM[smoothActive() ? 1 : 0]})`;
+  boardEl.append(floor);
   tiles.length = 0;
   opEls.length = 0;
   guardEls.clear();
@@ -1030,10 +1066,10 @@ function buildPlay(): void {
     const face = h('span', 'face');
     const hop = h('span', 'hop');
     const bob = h('span', 'bob');
-    bob.append(sprite(g.kind === 'watcher' ? 'watcher' : 'guard', 'blink'));
+    bob.append(figure('guard'));
     hop.append(bob);
     face.append(hop);
-    el.append(h('span', 'dir'), face, h('span', 'zzz', 'Zzz'));
+    el.append(h('span', 'cone'), h('span', 'dir'), face, h('span', 'zzz', 'Zzz'));
     el.addEventListener('click', () => onTile(app.s!.guards.find((q) => q.id === g.id)!.x, app.s!.guards.find((q) => q.id === g.id)!.y));
     guardEls.set(g.id, el);
     boardEl.append(el);
@@ -1043,7 +1079,8 @@ function buildPlay(): void {
     const face = h('span', 'face');
     const hop = h('span', 'hop');
     const bob = h('span', 'bob');
-    bob.append(sprite(CREW_ART[i] ?? 'vale', 'blink'));
+    bob.append(figure(CREW_FIG[i] ?? 'vale'));
+    el.dataset.view = 'front';
     hop.append(bob);
     face.append(hop);
     el.append(h('span', 'ring'), face, h('span', 'alert', '!'), h('span', 'fx'));
@@ -1061,7 +1098,7 @@ function buildPlay(): void {
   const cards = h('div', 'op-cards');
   SQUAD.forEach((_sq, i) => {
     const c = h('button', `op-card c${i}`);
-    c.append(sprite(CREW_ART[i] ?? 'vale'), h('span', 'nm', shortName(i)), h('small', '', `${i + 1}`));
+    c.append(figure(CREW_FIG[i] ?? 'vale', ['front']), h('span', 'nm', shortName(i)), h('small', '', `${i + 1}`));
     c.addEventListener('click', () => select(i as OpId));
     cards.append(c);
   });

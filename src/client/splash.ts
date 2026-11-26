@@ -1,6 +1,6 @@
 import { context, requestExpandedMode } from '@devvit/web/client';
 import type { HeistInit } from '../shared/heist/api.ts';
-import { ART, isArtName } from './art/index.ts';
+import { ART, figure, isArtName, isFigureName } from './art/index.ts';
 import './prefs.ts'; // applies the saved or system light/dark theme
 import { msUntilNextDream, nightNumber } from '../shared/logic/season.ts';
 
@@ -12,10 +12,11 @@ const status = $('status');
 const countdown = $('countdown');
 const crews = $('crews');
 
-// The hero scene: crew sneaking past a sleeping bot to the vault (inline SVG, no requests).
+// The hero scene: the crew sneaking past a sleeping bot to the vault (2D figures; the vault is SVG).
 for (const el of document.querySelectorAll<HTMLElement>('[data-art]')) {
   const name = el.dataset.art;
-  if (isArtName(name)) el.innerHTML = ART[name];
+  if (isFigureName(name)) el.replaceChildren(figure(name, [name === 'guard' ? 'front' : 'side']));
+  else if (isArtName(name)) el.innerHTML = ART[name];
 }
 
 // Expanded mode can only open from a real user gesture, so this is the one tap target in the feed.
