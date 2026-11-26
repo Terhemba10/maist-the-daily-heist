@@ -21,7 +21,8 @@ A turn-based tactics game played inside a Reddit post, on phone and desktop.
   every run to compute the score. Daily leaderboard with Snoovatars, streaks, and "Share to the thread".
 - White (light) theme by default; Dark and System in Settings.
 - **Smooth mode** (Settings: Auto / On / Off): on automatically on low-end phones (deviceMemory <= 4 or <= 4 CPU cores).
-  No background rays, dust or tint, no idle animations, flat tiles, no glows or filters. Same rules and score.
+  No dust, no idle animations, smaller images, flat tiles, no glows or filters. The four slow light rays stay:
+  measured, they keep the game on its own GPU layers (56-58 fps at 6x throttle vs 36-40 without). Same rules and score.
 - **2D art:** semi-realistic crew and robot figures with front / side / back views (side mirrored for left),
   1.7 tiles tall, standing on their tile centre with a coloured ground ring. The floor is drawn in code
   (`src/client/floor.ts`: wood planks and white tiles, no furniture); walls are navy desk / cabinet blocks.

@@ -780,7 +780,8 @@ function renderGhost(): void {
       const el = h('div', `op ghost c${i}`);
       el.dataset.view = 'front';
       const face = h('span', 'face');
-      face.append(figure(name));
+      // Smooth mode draws ghosts simply: one small front image, no turning
+      face.append(smoothActive() ? figure(name, ['front']) : figure(name));
       el.append(face);
       ghostEls.push(el);
       boardEl!.append(el);
@@ -797,7 +798,7 @@ function renderGhost(): void {
   });
   const lead = s.ops[g!.lastOp] ?? s.ops[0];
   if (ghostTag && lead) {
-    ghostTag.textContent = t('ghostOf', { name: g!.name });
+    setText(ghostTag, t('ghostOf', { name: g!.name }));
     ghostTag.classList.remove('gone');
     ghostTag.style.transform = `translate(calc(var(--cell) * ${lead.x} + var(--cell) / 2), calc(var(--cell) * ${lead.y}))`;
   }

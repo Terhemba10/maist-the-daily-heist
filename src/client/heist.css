@@ -2146,9 +2146,11 @@ small {
 /* ------------------------------------------------------------------ Smooth mode (low-end phones)
    No light rays or dust, no idle loops, no filters or blurred shadows. One-shot effects (hop, puff,
    caught, poof) still play once, so the game reads the same. */
-/* The whole animated background goes (rays, dust, tint): hiding only parts of it leaves a full-screen
-   gradient that is repainted under every board change, which measured slower than leaving it on. */
-:root.smooth .layer-bg,
+/* Smooth mode keeps the four slow light rays and drops the dust and the glint. Measured at 6x CPU
+   throttle while walking: with the animated rays 56-58 fps, without them 36-40. The animated layer under
+   everything makes Chrome keep the game on its own GPU layers, so a move never repaints the whole page
+   (invisible, opacity-only or single-ray stand-ins measured slower). */
+:root.smooth .layer-bg .dust,
 :root.smooth .art-vault .glint {
   display: none;
 }
@@ -2575,4 +2577,18 @@ html {
 }
 .ap-float {
   animation-duration: 0.6s;
+}
+
+/* ghost race on the 2D board: the label floats above the ghost's head (figures are 1.7 tiles tall,
+   feet on the tile centre) and above every figure */
+.board.room .ghost-tag {
+  margin-top: calc(var(--cell) * -1.15);
+  z-index: 60;
+}
+.board.room .op.ghost .ring {
+  display: none;
+}
+/* ghosts: see-through only (a filter on three moving figures cost ~5 fps at 6x throttle) */
+.board.room .op.ghost .face {
+  filter: none;
 }
