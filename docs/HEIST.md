@@ -34,4 +34,4 @@ Code: `src/shared/heist/engine.ts` (rules, generator, replay, tests in `engine.t
 (API), `src/client/heist.ts` + `heist.css` (game), `src/client/i18n/heist.ts` (text).
 The 3D Maist game is untouched on the `main` branch.
 
-Before going public: set `SEASON_START` in `src/shared/logic/season.ts` to launch day.
+`SEASON_START` (`src/shared/logic/season.ts`) is 2026-11-26, launch day on r/MaistHeist: that is Night 1.

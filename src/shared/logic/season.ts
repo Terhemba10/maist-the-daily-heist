@@ -2,7 +2,7 @@
  * Season calendar. Night 1 is SEASON_START (UTC); one night unlocks per UTC day.
  * Set SEASON_START to the day the first daily post goes live.
  */
-export const SEASON_START = '2026-11-21';
+export const SEASON_START = '2026-11-26';
 export const SEASON_NIGHTS = 30;
 
 const DAY_MS = 86_400_000;

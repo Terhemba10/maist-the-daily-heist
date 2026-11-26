@@ -268,7 +268,7 @@ function renderTitle(): void {
   if (!init) status.textContent = t('offline');
   else if (init.postNight !== init.today) status.textContent = t('archived');
   else if (init.scored) status.textContent = `${t('scoredDone', { score: init.scored.score })}${init.scored.rank ? ` · ${t('rankLine', { rank: init.scored.rank })}` : ''}`;
-  else if (!init.loggedIn) status.textContent = t('offline');
+  else if (!init.loggedIn) status.textContent = t('loggedOut');
 
   const actions = h('div', 'actions');
   if (canScore()) {

@@ -10,7 +10,7 @@ The 3D slice (v2) was **approved on 21 Nov**. The **daily system (step b/c) and 
 - The post made before this update has no night data or share thread. Use the subreddit menu **"Maist: post tonight's dream"** to create a fresh one.
 
 ## Daily system (b/c)
-- **Season calendar:** `SEASON_START = 2026-11-21` (`src/shared/logic/season.ts`), so Night 1 is today (UTC) and one night unlocks per UTC day. **Change this to the real launch day before going public.**
+- **Season calendar:** `SEASON_START = 2026-11-26` (`src/shared/logic/season.ts`): launch day on the public subreddit r/MaistHeist is Night 1, and one night unlocks per UTC day.
 - **Dream generator** (`src/shared/logic/generator.ts`): Night 1 is hand-written; every other night is built from its number:
   - a seeded 7×7 maze with loops, tide doors, a hidden-door shortcut, a Moth note in a dead end, and a memory key placed far from both start and vault;
   - layer 1 twist: tide doors, loop rooms or gravity flip; layer 2 twist: the tomorrow-twist vote winner, or seeded; last layer: echoes;
