@@ -35,6 +35,9 @@
   .screen { position: relative; width: 444px; height: 944px; border-radius: 50px; overflow: hidden; background: #fff; }
   .screen .content { position: absolute; inset: 0; transform-origin: 50% 50%; }
   .screen img.feed, .screen img.rec { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; }
+  /* the game's top HUD (layer name + AP), pinned unzoomed above a zoomed board */
+  .screen img.hud { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; clip-path: inset(0 0 87.5% 0); z-index: 2; display: none; }
+  .screen .hudline { position: absolute; left: 0; right: 0; top: 12.5%; height: 10px; background: linear-gradient(rgba(27,42,74,.18), transparent); z-index: 2; display: none; }
   .live-badge {
     position: absolute; left: 50%; top: 70px; transform: translateX(-50%); z-index: 4;
     background: var(--teal); color: #fff; font-weight: 800; font-size: 18px; letter-spacing: 0.14em;
@@ -57,7 +60,7 @@
 
   /* ---- live Reddit cards (real screenshots) */
   .card { position: absolute; left: 930px; top: 462px; width: 900px; height: 410px; opacity: 0; transform: translateY(30px); display: flex; gap: 30px; align-items: flex-start; }
-  .card .mini { width: 190px; height: 410px; border-radius: 28px; background: #101a2e; padding: 10px; box-shadow: 0 20px 50px rgba(27, 42, 74, 0.25); flex: none; }
+  .card .mini { width: 190px; height: 410px; border-radius: 28px; transform-origin: 0 0; position: relative; z-index: 5; background: #101a2e; padding: 10px; box-shadow: 0 20px 50px rgba(27, 42, 74, 0.25); flex: none; }
   .card .mini img, .card .mini .ph { width: 100%; height: 100%; border-radius: 20px; object-fit: cover; object-position: 50% 0; display: block; background: #e8edf3; }
   .card .ph { display: flex; align-items: center; justify-content: center; text-align: center; color: var(--soft); font-size: 20px; padding: 20px; }
   .card .note { padding-top: 26px; }
@@ -105,6 +108,7 @@
   <div class="phone">
     <div class="screen">
       <div class="content"><img class="rec" id="rec" alt="" /><img class="feed" id="feed" alt="" /></div>
+      <img class="hud" id="hud" alt="" /><div class="hudline" id="hudline"></div>
     </div>
     <div class="live-badge" id="phoneLive">LIVE ON REDDIT</div>
   </div>
@@ -151,6 +155,14 @@
     }
     feed.style.display = s.feed ? 'block' : 'none';
     document.getElementById('phoneLive').style.display = s.feed ? 'block' : 'none';
+    const hud = document.getElementById('hud');
+    hud.style.display = s.hud ? 'block' : 'none';
+    document.getElementById('hudline').style.display = s.hud ? 'block' : 'none';
+    if (s.hud && hud.dataset.src !== s.rec) {
+      hud.dataset.src = s.rec;
+      hud.src = s.rec;
+      loads.push(hud.decode().catch(() => {}));
+    }
     const content = document.querySelector('.screen .content');
     content.style.transform = `scale(${s.zoom.scale})`;
     content.style.transformOrigin = `${s.zoom.fx * 100}% ${s.zoom.fy * 100}%`;
@@ -180,6 +192,13 @@
         ph.textContent = s.card.placeholder;
       }
       document.getElementById('cardNote').textContent = s.card.note;
+      // grow the small screenshot to full phone height so it can be read, then back
+      const z = s.card.zoom ?? 0;
+      const k = z * z * (3 - 2 * z);
+      const mini = card.querySelector('.mini');
+      mini.style.transform = `translate(${232 * k}px, ${-394 * k}px) scale(${1 + 1.3 * k})`;
+      mini.style.boxShadow = k > 0 ? `0 30px 80px rgba(27,42,74,${0.25 + 0.2 * k})` : '';
+      card.style.zIndex = k > 0 ? '20' : '';
     }
     const b = document.getElementById('bubble');
     b.style.opacity = s.bubble;

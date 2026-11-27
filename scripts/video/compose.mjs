@@ -86,7 +86,9 @@ const MAIN = [
     cap: 'crew',
     segs: [seg('abilities', M.foldA - 1.0, M.foldA + 1.2), seg('abilities', M.fade - 0.5, M.fade + 1.9), seg('abilities', M.hazeA - 1.2, M.hazeA + 1.2)],
     chips: true,
-    zoom: { to: 1.22, fx: 0.25, fy: 0.42 },
+    // the board zooms in on the crew while the top HUD (layer name + AP) stays pinned and readable
+    zoom: { to: 1.3, fx: 0.18, fy: 0.55 },
+    hud: true,
   },
   { t: [16, 21], cap: 'guards', segs: [seg('run', M.l1 + 0.3, M.l1 + 0.3 + 6.5, 1.3)] },
   // the slip itself plays at half speed so the poof and the one-turn gold ping can be seen
@@ -96,14 +98,14 @@ const MAIN = [
     t: [32, 39],
     cap: 'pull',
     segs: [seg('run', M.adrift - 0.4, M.ask + 1.2), seg('run', M.got - 0.3, M.used + 2.0, 1.25)],
-    card: { file: 'thread.png', from: 33.0, note: 'The pinned crew thread on r/MaistHeist: a reply there sends the Pull.' },
-    bubble: [34.6, 37.4],
+    card: { file: 'thread.png', from: 33.0, zoom: [35.3, 36.9], note: 'The pinned crew thread on r/MaistHeist: a reply there sends the Pull.' },
+    bubble: [33.6, 35.2],
   },
   {
     t: [39, 45],
     cap: 'results',
     segs: [seg('run', M.results - 0.1, M.results + 2.4), seg('run', M.board + 0.6, M.board + 2.4), seg('run', M.join - 0.3, M.join + 1.2)],
-    card: { file: 'leaderboard.png', from: 39.6, note: 'The real leaderboard, inside Reddit.' },
+    card: { file: 'leaderboard.png', from: 39.6, zoom: [41.4, 43.0], note: 'The real leaderboard, inside Reddit.' },
   },
   {
     t: [45, 50],
@@ -159,7 +161,7 @@ function extract(scenes, tag) {
 const fade = (t, a, b, inn = 0.35, out = 0.25) => Math.max(0, Math.min(1, (t - a) / inn, (b - t) / out));
 function stateAt(t, scenes, vertical) {
   const sc = scenes.find((s) => t >= s.t[0] && t < s.t[1]) ?? scenes.at(-1);
-  const st = { zoom: { scale: 1, fx: 0.5, fy: 0.5 }, cap: { id: sc.cap, a: 0, chip: null }, card: null, bubble: 0, sub: null, end: 0, rec: null, feed: null };
+  const st = { zoom: { scale: 1, fx: 0.5, fy: 0.5 }, cap: { id: sc.cap, a: 0, chip: null }, card: null, bubble: 0, sub: null, end: 0, rec: null, feed: null, hud: false };
   // phone content
   if (sc.feed && real(sc.feed)) st.feed = real(sc.feed);
   else if (sc.parts.length) {
@@ -167,6 +169,7 @@ function stateAt(t, scenes, vertical) {
     const i = Math.min(p.files.length - 1, Math.max(0, Math.floor((t - p.start) * FPS)));
     st.rec = pathToFileURL(p.files[i]).href;
     if (sc.chips) st.cap.chip = sc.parts.indexOf(p);
+    if (sc.hud) st.hud = true;
   }
   if (sc.chips && sc.feed === undefined && sc.cap === 'montage' && st.cap.chip === null) st.cap.chip = 0;
   // zoom in at the start of the scene, back out at the end
@@ -178,8 +181,9 @@ function stateAt(t, scenes, vertical) {
   st.cap.a = sc.cap === 'end' ? 0 : fade(t, sc.t[0], sc.t[1]);
   if (sc.card && !vertical) {
     st.card = { a: fade(t, sc.card.from, sc.t[1]), src: real(sc.card.file), placeholder: `${sc.card.file} (live screenshot)`, note: sc.card.note };
+    if (sc.card.zoom) st.card.zoom = fade(t, sc.card.zoom[0], sc.card.zoom[1], 0.35, 0.35);
   }
-  if (sc.bubble && !vertical) st.bubble = fade(t, sc.bubble[0], sc.bubble[1], 0.25, 0.25);
+  if (sc.bubble && !vertical) st.bubble = fade(t, sc.bubble[0], sc.bubble[1], 0.25, 0.25) * (1 - (st.card?.zoom ?? 0));
   if (sc.end !== undefined) st.end = Math.min(1, Math.max(0, (t - sc.end) / 0.6));
   if (!vertical) {
     const i = VO_AT.findIndex((a, j) => t >= a && t < a + vo[j].duration + 0.25);
@@ -383,7 +387,7 @@ if (WHAT === 'stills' || WHAT === 'all') {
   await render(MAIN, {
     tag: 'stills', w: 1920, h: 1080, vertical: false,
     stills: [
-      [`${ROOT}/docs/devpost/still-1-crew.png`, 11.5],
+      [`${ROOT}/docs/devpost/still-1-crew.png`, 12.0],
       [`${ROOT}/docs/devpost/still-2-vault-slips.png`, 25.0],
       [`${ROOT}/docs/devpost/still-3-ghost-race.png`, 29.5],
       [`${ROOT}/docs/devpost/still-4-wake-up.png`, 36.0],
