@@ -5,8 +5,13 @@ for everyone: sneak a crew of three past patrolling robots and crack the vault o
 One scored run per night, a daily leaderboard, streaks, and a community that can pull you back when
 you get stuck.
 
-Play it on **[r/MaistHeist](https://www.reddit.com/r/MaistHeist/)**. A new post appears every day at
-00:00 UTC. It works on phones and desktop, logged in or not (logged-out players can practice).
+- **Play it:** https://www.reddit.com/r/MaistHeist/ (a new post every day at 00:00 UTC)
+- **Demo video (54 s):** https://youtu.be/HiwOTZcwHk0
+
+[![Maist: The Daily Heist: the vault slips](docs/devpost/still-2-vault-slips.png)](https://youtu.be/HiwOTZcwHk0)
+
+It works on phones and desktop, logged in or not (logged-out players can practice). Built solo on
+Reddit's Developer Platform (Devvit) for Reddit's Game of the Day Hackathon 2026.
 
 ## How to play
 

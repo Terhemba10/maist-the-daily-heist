@@ -97,7 +97,7 @@ ffmpeg
 ## 6. Video demo link
 
 ```
-https://youtu.be/PASTE-YOUR-VIDEO-ID-HERE
+https://youtu.be/HiwOTZcwHk0
 ```
 
 Upload `docs/video/maist-demo.mp4` (54.0 s) first, using `docs/video/YOUTUBE.md`.
