@@ -664,7 +664,8 @@ async function finish(): Promise<void> {
 
 /**
  * The one next step after a run: join the subreddit for tomorrow's heist. Logged-in players are
- * subscribed by the app (as themselves); logged-out players are sent to the subreddit to join there.
+ * subscribed by the app (as themselves) when Reddit allows it; otherwise, and when logged out, they are
+ * sent to the subreddit to join there.
  */
 function joinButton(): HTMLElement {
   const sub = app.init?.subreddit || 'MaistHeist';
@@ -682,8 +683,10 @@ function joinButton(): HTMLElement {
       b.replaceWith(h('p', 'joined', t('joinedSub', { sub })));
       audio.drop();
     } else {
+      // Reddit has not granted SUBSCRIBE_TO_SUBREDDIT to the app (it is unpublished): send the player
+      // to the subreddit so they can join it there with one tap.
       b.removeAttribute('disabled');
-      toast(r?.message ?? t('blocked'));
+      navigateTo(`https://www.reddit.com/r/${sub}/`);
     }
   });
   return b;
