@@ -14,3 +14,9 @@ dist
 coverage/
 docs/screens/_tmp/
 heist.tgz
+
+# demo video: large media stays local (scripts/video rebuilds it)
+docs/video/*.mp4
+docs/video/rec/
+docs/video/work/
+docs/video/music.mp3

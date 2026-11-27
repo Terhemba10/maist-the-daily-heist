@@ -1,0 +1,197 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  :root {
+    --teal: #0b7fa3;
+    --navy: #1b2a4a;
+    --ink: #1b2a4a;
+    --soft: #5b6b84;
+    --bg: #f6f8fa;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; }
+  body {
+    font-family: 'Segoe UI', 'Segoe UI Emoji', system-ui, sans-serif;
+    color: var(--ink);
+    background:
+      linear-gradient(rgba(27, 42, 74, 0.05) 1px, transparent 1px) 0 0 / 40px 40px,
+      linear-gradient(90deg, rgba(27, 42, 74, 0.05) 1px, transparent 1px) 0 0 / 40px 40px,
+      var(--bg);
+    position: relative;
+  }
+  body.vertical { width: 1080px; height: 1920px; }
+  .brand { position: absolute; left: 930px; top: 64px; font-weight: 800; letter-spacing: 0.32em; font-size: 22px; color: var(--teal); }
+  .brand b { color: var(--navy); }
+
+  /* ---- the phone */
+  .phone {
+    position: absolute; left: 330px; top: 52px; width: 476px; height: 976px;
+    border-radius: 64px; background: #101a2e; padding: 16px;
+    box-shadow: 0 30px 80px rgba(27, 42, 74, 0.28), 0 0 0 2px #2c3b5c inset;
+  }
+  .phone::before { content: ''; position: absolute; left: 50%; top: 24px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: #101a2e; box-shadow: 0 0 0 2px #26324d; z-index: 3; }
+  .screen { position: relative; width: 444px; height: 944px; border-radius: 50px; overflow: hidden; background: #fff; }
+  .screen .content { position: absolute; inset: 0; transform-origin: 50% 50%; }
+  .screen img.feed, .screen img.rec { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; }
+  .live-badge {
+    position: absolute; left: 50%; top: 70px; transform: translateX(-50%); z-index: 4;
+    background: var(--teal); color: #fff; font-weight: 800; font-size: 18px; letter-spacing: 0.14em;
+    padding: 8px 18px; border-radius: 999px; box-shadow: 0 6px 18px rgba(11, 127, 163, 0.35);
+  }
+  .live-badge::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ff4d6d; margin-right: 10px; vertical-align: 2px; }
+
+  /* ---- captions */
+  .panel { position: absolute; left: 930px; top: 150px; width: 900px; }
+  .cap { position: absolute; left: 0; top: 0; width: 100%; opacity: 0; transform: translateY(24px); }
+  .kicker { font-size: 24px; font-weight: 800; letter-spacing: 0.24em; color: var(--teal); margin: 0 0 18px; }
+  .title { font-size: 78px; line-height: 1.04; font-weight: 800; margin: 0; color: var(--navy); letter-spacing: -0.01em; }
+  .title em, .body em { font-style: normal; color: var(--teal); }
+  .body { font-size: 40px; line-height: 1.25; font-weight: 600; margin: 22px 0 0; color: var(--navy); }
+  .chips { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 28px; }
+  .chip { font-size: 32px; font-weight: 700; padding: 12px 24px; border-radius: 999px; border: 3px solid rgba(11, 127, 163, 0.35); color: var(--navy); background: #fff; transition: none; }
+  .chip small { display: block; font-size: 22px; font-weight: 600; color: var(--soft); }
+  .chip.on { border-color: var(--teal); background: var(--teal); color: #fff; }
+  .chip.on small { color: #e3f5fb; }
+
+  /* ---- live Reddit cards (real screenshots) */
+  .card { position: absolute; left: 930px; top: 462px; width: 900px; height: 410px; opacity: 0; transform: translateY(30px); display: flex; gap: 30px; align-items: flex-start; }
+  .card .mini { width: 190px; height: 410px; border-radius: 28px; background: #101a2e; padding: 10px; box-shadow: 0 20px 50px rgba(27, 42, 74, 0.25); flex: none; }
+  .card .mini img, .card .mini .ph { width: 100%; height: 100%; border-radius: 20px; object-fit: cover; object-position: 50% 0; display: block; background: #e8edf3; }
+  .card .ph { display: flex; align-items: center; justify-content: center; text-align: center; color: var(--soft); font-size: 20px; padding: 20px; }
+  .card .note { padding-top: 26px; }
+  .card .note .live-badge { position: static; transform: none; display: inline-block; }
+  .card .note p { font-size: 28px; font-weight: 600; color: var(--navy); line-height: 1.3; margin: 22px 0 0; max-width: 560px; }
+  .bubble {
+    position: absolute; left: 1160px; top: 690px; opacity: 0; transform: scale(0.6);
+    background: #fff; border: 4px solid var(--teal); border-radius: 26px; padding: 18px 28px; font-size: 40px; font-weight: 800; color: var(--teal);
+    box-shadow: 0 16px 40px rgba(11, 127, 163, 0.25);
+  }
+  .bubble small { display: block; font-size: 20px; font-weight: 700; color: var(--soft); letter-spacing: 0.1em; }
+
+  /* ---- narration captions */
+  .sub {
+    position: absolute; left: 930px; bottom: 54px; width: 900px; min-height: 92px; opacity: 0;
+    background: #fff; border-left: 8px solid var(--teal); border-radius: 14px; padding: 18px 26px;
+    font-size: 30px; line-height: 1.3; font-weight: 600; color: var(--navy);
+    box-shadow: 0 10px 30px rgba(27, 42, 74, 0.12);
+  }
+
+  /* ---- end card */
+  .end { position: absolute; inset: 0; opacity: 0; display: flex; align-items: center; justify-content: flex-end; padding-right: 110px; pointer-events: none; }
+  .end .inner { width: 880px; }
+  .end h1 { font-size: 92px; line-height: 1; margin: 0 0 18px; color: var(--navy); font-weight: 800; }
+  .end h1 em { font-style: normal; color: var(--teal); }
+  .end p { font-size: 44px; font-weight: 700; margin: 10px 0; color: var(--navy); }
+  .end .sr { color: var(--teal); font-size: 62px; font-weight: 800; }
+  .end .btn { display: inline-block; margin-top: 26px; background: var(--navy); color: #fff; font-size: 40px; font-weight: 800; padding: 22px 40px; border-radius: 18px; box-shadow: 0 14px 36px rgba(27, 42, 74, 0.3); }
+
+  /* ---- vertical teaser layout */
+  body.vertical .brand { left: 50%; transform: translateX(-50%); top: 56px; white-space: nowrap; }
+  body.vertical .phone { left: 148px; top: 470px; width: 784px; height: 1608px; border-radius: 96px; padding: 24px; }
+  body.vertical .screen { width: 736px; height: 1560px; border-radius: 76px; }
+  body.vertical .panel { left: 70px; top: 130px; width: 940px; text-align: center; }
+  body.vertical .title { font-size: 84px; }
+  body.vertical .body { font-size: 46px; }
+  body.vertical .chips { justify-content: center; }
+  body.vertical .sub, body.vertical .card, body.vertical .bubble { display: none; }
+  body.vertical .end { justify-content: center; padding: 0; align-items: flex-start; padding-top: 150px; text-align: center; }
+  body.vertical .end .inner { width: 940px; background: rgba(246, 248, 250, 0.96); border-radius: 40px; padding: 50px 30px; box-shadow: 0 20px 60px rgba(27,42,74,.2); }
+</style>
+</head>
+<body>
+  <div class="brand"><b>MAIST</b> · THE DAILY HEIST</div>
+  <div class="phone">
+    <div class="screen">
+      <div class="content"><img class="rec" id="rec" alt="" /><img class="feed" id="feed" alt="" /></div>
+    </div>
+    <div class="live-badge" id="phoneLive">LIVE ON REDDIT</div>
+  </div>
+  <div class="panel" id="panel"></div>
+  <div class="card" id="card"><div class="mini"><img id="cardImg" alt="" /><div class="ph" id="cardPh">Live screenshot</div></div><div class="note"><span class="live-badge">LIVE ON REDDIT</span><p id="cardNote"></p></div></div>
+  <div class="bubble" id="bubble"><small>REPLY IN THE THREAD</small>WAKE UP!</div>
+  <div class="sub" id="sub"></div>
+  <div class="end" id="end"><div class="inner">
+    <h1>New maps <em>every day</em></h1>
+    <p class="sr">r/MaistHeist</p>
+    <p>Maist: The Daily Heist</p>
+    <span class="btn">Join for tomorrow’s heist</span>
+  </div></div>
+<script>
+  // Captions are built once; apply(state) only changes what each frame needs.
+  window.setup = (caps, vertical) => {
+    if (vertical) document.body.classList.add('vertical');
+    const panel = document.getElementById('panel');
+    for (const c of caps) {
+      const el = document.createElement('div');
+      el.className = 'cap';
+      el.id = 'cap-' + c.id;
+      el.innerHTML = `<p class="kicker">${c.kicker}</p><h2 class="title">${c.title}</h2>` +
+        (c.body ? `<p class="body">${c.body}</p>` : '') +
+        (c.chips ? `<div class="chips">${c.chips.map((x, i) => `<span class="chip" data-i="${i}">${x}</span>`).join('')}</div>` : '');
+      panel.append(el);
+    }
+  };
+  const ease = (x) => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
+  window.apply = async (s) => {
+    const rec = document.getElementById('rec');
+    const feed = document.getElementById('feed');
+    const loads = [];
+    if (s.rec && rec.dataset.src !== s.rec) {
+      rec.dataset.src = s.rec;
+      rec.src = s.rec;
+      loads.push(rec.decode().catch(() => {}));
+    }
+    rec.style.display = s.rec ? 'block' : 'none';
+    if (s.feed && feed.dataset.src !== s.feed) {
+      feed.dataset.src = s.feed;
+      feed.src = s.feed;
+      loads.push(feed.decode().catch(() => {}));
+    }
+    feed.style.display = s.feed ? 'block' : 'none';
+    document.getElementById('phoneLive').style.display = s.feed ? 'block' : 'none';
+    const content = document.querySelector('.screen .content');
+    content.style.transform = `scale(${s.zoom.scale})`;
+    content.style.transformOrigin = `${s.zoom.fx * 100}% ${s.zoom.fy * 100}%`;
+    for (const el of document.querySelectorAll('.cap')) {
+      const a = el.id === 'cap-' + s.cap.id ? s.cap.a : 0;
+      el.style.opacity = a;
+      el.style.transform = `translateY(${(1 - ease(a)) * 24}px)`;
+      if (el.id === 'cap-' + s.cap.id) el.querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', s.cap.chip === Number(c.dataset.i) || s.cap.chip === 'all'));
+    }
+    const card = document.getElementById('card');
+    card.style.opacity = s.card ? s.card.a : 0;
+    card.style.transform = `translateY(${s.card ? (1 - ease(s.card.a)) * 30 : 30}px)`;
+    if (s.card) {
+      const img = document.getElementById('cardImg');
+      const ph = document.getElementById('cardPh');
+      if (s.card.src) {
+        if (img.dataset.src !== s.card.src) {
+          img.dataset.src = s.card.src;
+          img.src = s.card.src;
+          loads.push(img.decode().catch(() => {}));
+        }
+        img.style.display = 'block';
+        ph.style.display = 'none';
+      } else {
+        img.style.display = 'none';
+        ph.style.display = 'flex';
+        ph.textContent = s.card.placeholder;
+      }
+      document.getElementById('cardNote').textContent = s.card.note;
+    }
+    const b = document.getElementById('bubble');
+    b.style.opacity = s.bubble;
+    b.style.transform = `scale(${0.6 + 0.4 * ease(s.bubble * 1.4)})`;
+    const sub = document.getElementById('sub');
+    sub.style.opacity = s.sub ? s.sub.a : 0;
+    if (s.sub) sub.textContent = s.sub.text;
+    const end = document.getElementById('end');
+    end.style.opacity = s.end;
+    document.querySelector('.panel').style.opacity = 1 - s.end;
+    await Promise.all(loads);
+  };
+</script>
+</body>
+</html>
