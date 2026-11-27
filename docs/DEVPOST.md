@@ -17,7 +17,7 @@ Maist: The Daily Heist
 A new crew stealth heist every day, inside Reddit
 ```
 
-(48 characters)
+(49 characters)
 
 ## 3. About the project (the story field, Markdown)
 
