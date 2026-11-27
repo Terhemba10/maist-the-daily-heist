@@ -71,48 +71,49 @@ const CAPS = [
   { id: 'guards', kicker: 'STEALTH', title: 'Sneak past <em>security bots</em>', body: 'Stay out of the red beams' },
   { id: 'slip', kicker: 'THE TWIST', title: 'The vault <em>slips!</em>', body: 'Find it again' },
   { id: 'ghost', kicker: 'GHOST RACE', title: 'Race tonight’s <em>#1 player’s ghost</em>', body: 'Their best run replays beside you' },
-  { id: 'pull', kicker: 'PLAY WITH FRIENDS', title: 'Stuck? Your friends <em>pull you back</em>', body: 'They rescue you by replying WAKE UP' },
-  { id: 'results', kicker: 'COMPETE', title: 'Daily leaderboard <em>+ streaks 🔥</em>', body: 'One scored run per night' },
+  { id: 'pull', kicker: 'PLAY WITH FRIENDS', title: 'Friends <em>rescue you</em>', body: 'by replying WAKE UP' },
+  { id: 'results', kicker: 'COMPETE', title: 'Daily leaderboard <em>+ streaks</em>', body: 'One scored run per night 🔥' },
   { id: 'montage', kicker: 'FOR EVERY PLAYER', title: 'Made for every phone', chips: ['White & night themes', '5 languages', 'Smooth on phones'] },
   { id: 'end', kicker: '', title: '' },
 ];
 // scene: [start, end], caption, recording segments (played back to back), optional zoom/card/feed
+// 54.0 s in all (hard limit 54.5 s). Walking plays at 1.3x at most; scenes are filled exactly.
 const MAIN = [
   { t: [0, 4], cap: 'feed', feed: 'feed.png', zoom: { to: 1.06, fx: 0.5, fy: 0.3 }, fallback: [seg('run', M.title - 0.2, M.title + 3.8)] },
-  { t: [4, 10], cap: 'start', segs: [seg('run', M.title - 0.1, M.title + 5.9)] },
+  { t: [4, 9], cap: 'start', segs: [seg('run', M.title + 0.3, M.title + 5.3)] },
   {
-    t: [10, 18],
+    t: [9, 16],
     cap: 'crew',
-    segs: [seg('abilities', M.fold - 0.2, M.foldA + 1.1), seg('abilities', M.fade - 0.6, M.fade + 2.1), seg('abilities', M.hazeA - 1.4, M.hazeA + 1.3)],
+    segs: [seg('abilities', M.foldA - 1.0, M.foldA + 1.2), seg('abilities', M.fade - 0.5, M.fade + 1.9), seg('abilities', M.hazeA - 1.2, M.hazeA + 1.2)],
     chips: true,
     zoom: { to: 1.22, fx: 0.25, fy: 0.42 },
   },
-  { t: [18, 24], cap: 'guards', segs: [seg('run', M.l1 + 0.3, M.c1 + 0.6, (M.c1 + 0.3 - M.l1) / 6)] },
+  { t: [16, 21], cap: 'guards', segs: [seg('run', M.l1 + 0.3, M.l1 + 0.3 + 6.5, 1.3)] },
   // the slip itself plays at half speed so the poof and the one-turn gold ping can be seen
-  { t: [24, 30.5], cap: 'slip', segs: [seg('run', M.slip - 3.6, M.slip - 0.25), seg('run', M.slip - 0.25, M.slip + 1.3, 0.5)], zoom: { to: 1.14, ...SLIP_FOCUS } },
-  { t: [30.5, 36], cap: 'ghost', segs: [seg('run', M.slip + 2.5, M.c2 + 0.4, (M.c2 - 2.1 - M.slip) / 5.5)] },
+  { t: [21, 27], cap: 'slip', segs: [seg('run', M.slip - 3.0, M.slip - 0.25), seg('run', M.slip - 0.25, M.slip + 1.35, 0.5)], zoom: { to: 1.14, ...SLIP_FOCUS } },
+  { t: [27, 32], cap: 'ghost', segs: [seg('run', M.slip + 2.6, M.slip + 2.6 + 6.5, 1.3)] },
   {
-    t: [36, 43],
+    t: [32, 39],
     cap: 'pull',
     segs: [seg('run', M.adrift - 0.4, M.ask + 1.2), seg('run', M.got - 0.3, M.used + 2.0, 1.25)],
-    card: { file: 'thread.png', from: 37.2, note: 'The pinned crew thread on r/MaistHeist: a reply there sends the Pull.' },
-    bubble: [39.0, 41.8],
+    card: { file: 'thread.png', from: 33.0, note: 'The pinned crew thread on r/MaistHeist: a reply there sends the Pull.' },
+    bubble: [34.6, 37.4],
   },
   {
-    t: [43, 48],
+    t: [39, 45],
     cap: 'results',
-    segs: [seg('run', M.results - 0.1, M.results + 2.9), seg('run', M.board + 0.8, M.board + 2.8)],
-    card: { file: 'leaderboard.png', from: 43.6, note: 'The real leaderboard, inside Reddit.' },
+    segs: [seg('run', M.results - 0.1, M.results + 2.4), seg('run', M.board + 0.6, M.board + 2.4), seg('run', M.join - 0.3, M.join + 1.2)],
+    card: { file: 'leaderboard.png', from: 39.6, note: 'The real leaderboard, inside Reddit.' },
   },
   {
-    t: [48, 52.2],
+    t: [45, 50],
     cap: 'montage',
-    segs: [seg('montage', M.night + 0.3, M.night + 1.7), seg('montage', M.langs + 0.2, M.en + 0.5, 2), seg('montage', M.smooth - 0.15, M.smooth + 0.97)],
+    segs: [seg('montage', M.night + 0.3, M.night + 1.8), seg('montage', M.langs + 0.2, M.en + 0.5, 2), seg('montage', M.smooth - 0.15, M.smooth + 0.97)],
     chips: true,
   },
-  { t: [52.2, 57.6], cap: 'end', segs: [seg('run', M.join - 1.0, M.join + 2.6)], end: 54.0 },
+  { t: [50, 54], cap: 'end', segs: [seg('run', M.join + 0.2, M.join + 2.6)], end: 50.3 },
 ];
-const VO_AT = [0.3, 5.7, 10.1, 18.1, 24.1, 30.6, 36.1, 43.1, 48.1, 52.4];
+const VO_AT = [0.2, 4.2, 9.2, 16.2, 21.2, 27.2, 32.2, 39.2, 45.2, 50.2];
 
 const TEASER = [
   { t: [0, 3], cap: 'slip', segs: [seg('run', M.slip - 1.2, M.slip - 0.2), seg('run', M.slip - 0.2, M.slip + 0.8, 0.5)], zoom: { to: 1.1, ...SLIP_FOCUS } },
@@ -382,11 +383,11 @@ if (WHAT === 'stills' || WHAT === 'all') {
   await render(MAIN, {
     tag: 'stills', w: 1920, h: 1080, vertical: false,
     stills: [
-      [`${ROOT}/docs/devpost/still-1-crew.png`, 13.3],
-      [`${ROOT}/docs/devpost/still-2-vault-slips.png`, 28.2],
-      [`${ROOT}/docs/devpost/still-3-ghost-race.png`, 33.5],
-      [`${ROOT}/docs/devpost/still-4-wake-up.png`, 40.2],
-      [`${ROOT}/docs/devpost/still-5-leaderboard.png`, 46.6],
+      [`${ROOT}/docs/devpost/still-1-crew.png`, 11.5],
+      [`${ROOT}/docs/devpost/still-2-vault-slips.png`, 25.0],
+      [`${ROOT}/docs/devpost/still-3-ghost-race.png`, 29.5],
+      [`${ROOT}/docs/devpost/still-4-wake-up.png`, 36.0],
+      [`${ROOT}/docs/devpost/still-5-leaderboard.png`, 42.6],
     ],
   });
   console.log('stills written to docs/devpost/');

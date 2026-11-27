@@ -1,72 +1,72 @@
 [
  {
   "i": 0,
-  "text": "This is Maist: The Daily Heist — a brand-new heist, every day, right inside Reddit.",
+  "text": "Maist: The Daily Heist. A new heist every day, on Reddit.",
   "file": "line-00.mp3",
   "voice": "en-US-AndrewNeural",
-  "duration": 5.21
+  "duration": 3.77
  },
  {
   "i": 1,
   "text": "Three dream layers. One shared pool of moves.",
   "file": "line-01.mp3",
   "voice": "en-US-AndrewNeural",
-  "duration": 3.14
+  "duration": 3.02
  },
  {
   "i": 2,
-  "text": "Meet your crew: Vale folds walls open, Wren fades from sight, and Oto puts guards to sleep.",
+  "text": "Vale folds walls, Wren fades, and Oto puts guards to sleep.",
   "file": "line-02.mp3",
   "voice": "en-US-AndrewNeural",
-  "duration": 5.88
+  "duration": 4.03
  },
  {
   "i": 3,
-  "text": "Sneak past the security bots — stay out of the red beams!",
+  "text": "Sneak past the bots, and stay out of the red beams!",
   "file": "line-03.mp3",
   "voice": "en-US-AndrewNeural",
-  "duration": 3.48
+  "duration": 2.98
  },
  {
   "i": 4,
   "text": "Wait… the vault slipped! Find it again.",
   "file": "line-04.mp3",
   "voice": "en-US-AndrewNeural",
-  "duration": 3.0
+  "duration": 2.86
  },
  {
   "i": 5,
   "text": "Race the ghost of tonight's number one player.",
   "file": "line-05.mp3",
   "voice": "en-US-AndrewNeural",
-  "duration": 2.42
+  "duration": 2.3
  },
  {
   "i": 6,
-  "text": "Stuck adrift? Ask the thread for a Pull — when a friend replies 'wake up', your crew is back in the game.",
+  "text": "Stuck? Friends rescue you by replying 'wake up'.",
   "file": "line-06.mp3",
   "voice": "en-US-AndrewNeural",
-  "duration": 5.98
+  "duration": 3.07
  },
  {
   "i": 7,
   "text": "Climb the daily leaderboard and keep your streak alive.",
   "file": "line-07.mp3",
   "voice": "en-US-AndrewNeural",
-  "duration": 3.0
+  "duration": 2.88
  },
  {
   "i": 8,
   "text": "White or night mode, five languages, smooth on any phone.",
   "file": "line-08.mp3",
   "voice": "en-US-AndrewNeural",
-  "duration": 3.98
+  "duration": 3.79
  },
  {
   "i": 9,
-  "text": "New maps every day. Join r/MaistHeist… and pull off tomorrow's heist.",
+  "text": "New maps every day. Join r/MaistHeist.",
   "file": "line-09.mp3",
   "voice": "en-US-AndrewNeural",
-  "duration": 4.68
+  "duration": 3.12
  }
 ]

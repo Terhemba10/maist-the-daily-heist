@@ -16,19 +16,20 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "docs" / "video" / "vo"
 VOICES = ["en-US-AndrewNeural", "en-US-GuyNeural"]
-RATE = "+5%"
+RATE = "+10%"
 
+# One short sentence per scene (the demo must stay under 54.5 s).
 LINES = [
-    "This is Maist: The Daily Heist — a brand-new heist, every day, right inside Reddit.",
+    "Maist: The Daily Heist. A new heist every day, on Reddit.",
     "Three dream layers. One shared pool of moves.",
-    "Meet your crew: Vale folds walls open, Wren fades from sight, and Oto puts guards to sleep.",
-    "Sneak past the security bots — stay out of the red beams!",
+    "Vale folds walls, Wren fades, and Oto puts guards to sleep.",
+    "Sneak past the bots, and stay out of the red beams!",
     "Wait… the vault slipped! Find it again.",
     "Race the ghost of tonight's number one player.",
-    "Stuck adrift? Ask the thread for a Pull — when a friend replies 'wake up', your crew is back in the game.",
+    "Stuck? Friends rescue you by replying 'wake up'.",
     "Climb the daily leaderboard and keep your streak alive.",
     "White or night mode, five languages, smooth on any phone.",
-    "New maps every day. Join r/MaistHeist… and pull off tomorrow's heist.",
+    "New maps every day. Join r/MaistHeist.",
 ]
 
 

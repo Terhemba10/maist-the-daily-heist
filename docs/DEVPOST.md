@@ -4,7 +4,7 @@ Everything to paste into Devpost, plus a click-by-click checklist at the end.
 
 - **Play it:** https://www.reddit.com/r/MaistHeist/ (Night 1 post: https://www.reddit.com/r/MaistHeist/comments/1y6a4ox/)
 - **App:** https://developers.reddit.com/apps/maist-game
-- **Demo video (file):** `docs/video/maist-demo.mp4` (57.6 s, 1920x1080). Upload it to YouTube and paste that link.
+- **Demo video (file):** `docs/video/maist-demo.mp4` (54.0 s, 1920x1080). Upload it to YouTube and paste that link.
 - **Vertical teaser:** `docs/video/maist-teaser-vertical.mp4` (15 s, 1080x1920)
 - **Gallery images:** `docs/devpost/still-1-crew.png` … `still-5-leaderboard.png` (1920x1080)
 
